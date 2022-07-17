@@ -24,7 +24,8 @@ impl AnySlicePtr {
     /// # Safety
     ///
     /// Just like regular pointers, they can be copied all over the place, and it is up to
-    /// the user to ensure they don't alias when dereferenced.
+    /// the user to ensure they don't alias when dereferenced, and that they lifetime of the
+    /// original reference is respected.
     pub unsafe fn deref(&self) -> AnySliceRef<'_> {
         AnySliceRef {
             ptr: self.ptr,
@@ -39,7 +40,8 @@ impl AnySlicePtr {
     /// # Safety
     ///
     /// Just like regular pointers, they can be copied all over the place, and it is up to
-    /// the user to ensure they don't alias when dereferenced.
+    /// the user to ensure they don't alias when dereferenced, and that they lifetime of the
+    /// original reference is respected.
     pub unsafe fn deref_mut(&mut self) -> AnySliceMut<'_> {
         AnySliceMut {
             ptr: self.ptr,

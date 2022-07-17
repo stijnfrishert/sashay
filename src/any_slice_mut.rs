@@ -1,5 +1,10 @@
 use erasable::{erase, ErasablePtr, ErasedPtr};
-use std::{any::TypeId, marker::PhantomData, ptr::NonNull, slice::from_raw_parts_mut};
+use std::{
+    any::TypeId,
+    marker::PhantomData,
+    ptr::NonNull,
+    slice::{from_raw_parts, from_raw_parts_mut},
+};
 
 /// A type-erased mutable slice
 ///
@@ -7,8 +12,8 @@ use std::{any::TypeId, marker::PhantomData, ptr::NonNull, slice::from_raw_parts_
 ///
 /// ```
 /// let mut data : [i32; 3] = [0, 1, 2];
-/// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
-/// let slice = any.downcast::<i32>().expect("any was not a &mut [i32]");
+/// let mut any = sashay::AnySliceMut::erase(data.as_mut_slice());
+/// let slice = any.downcast_mut::<i32>().expect("any was not a &mut [i32]");
 ///
 /// slice.fill(0);
 ///
@@ -35,7 +40,26 @@ impl<'a> AnySliceMut<'a> {
     /// Try to downcast back to the original slice
     ///
     /// If the type does not match, [`None`] is returned
-    pub fn downcast<U: 'static>(&self) -> Option<&'a mut [U]> {
+    pub fn downcast_ref<U: 'static>(&self) -> Option<&'a [U]> {
+        let expected = TypeId::of::<U>();
+
+        if self.type_id == expected {
+            // SAFETY: This is safe, because we've checked that the type ids match
+            let ptr = unsafe { <NonNull<U>>::unerase(self.ptr) };
+
+            // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
+            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.len) };
+
+            Some(slice)
+        } else {
+            None
+        }
+    }
+
+    /// Try to downcast back to the original slice
+    ///
+    /// If the type does not match, [`None`] is returned
+    pub fn downcast_mut<U: 'static>(&mut self) -> Option<&'a mut [U]> {
         let expected = TypeId::of::<U>();
 
         if self.type_id == expected {

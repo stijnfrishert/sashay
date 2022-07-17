@@ -8,7 +8,7 @@ use std::{any::TypeId, marker::PhantomData, ptr::NonNull, slice::from_raw_parts}
 /// ```
 /// let data : [i32; 3] = [0, 1, 2];
 /// let any = sashay::AnySliceRef::erase(data.as_slice());
-/// let slice = any.downcast::<i32>().expect("any was not a &[i32]");
+/// let slice = any.downcast_ref::<i32>().expect("any was not a &[i32]");
 ///
 /// assert_eq!(slice, data.as_slice());
 /// ```
@@ -34,7 +34,7 @@ impl<'a> AnySliceRef<'a> {
     /// Try to downcast back to the original slice
     ///
     /// If the type does not match, [`None`] is returned
-    pub fn downcast<U: 'static>(&self) -> Option<&'a [U]> {
+    pub fn downcast_ref<U: 'static>(&self) -> Option<&'a [U]> {
         let expected = TypeId::of::<U>();
 
         if self.type_id == expected {
