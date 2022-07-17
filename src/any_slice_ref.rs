@@ -65,3 +65,33 @@ impl<'a> AnySliceRef<'a> {
         self.len == 0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn downcast_ref() {
+        let data: [i32; 3] = [0, 1, 2];
+        let any = AnySliceRef::erase(data.as_slice());
+        let slice = any.downcast_ref::<i32>().expect("any was not a &[i32]");
+
+        assert_eq!(slice, data.as_slice());
+    }
+
+    #[test]
+    fn getters() {
+        let data: [i32; 3] = [0, 1, 2];
+        let any = AnySliceRef::erase(data.as_slice());
+
+        assert_eq!(any.type_id(), &TypeId::of::<i32>());
+        assert_eq!(any.len(), 3);
+        assert!(!any.is_empty());
+
+        let data: [i32; 0] = [];
+        let any = AnySliceRef::erase(data.as_slice());
+
+        assert_eq!(any.len(), 0);
+        assert!(any.is_empty());
+    }
+}

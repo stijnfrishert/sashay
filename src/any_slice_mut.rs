@@ -90,3 +90,47 @@ impl<'a> AnySliceMut<'a> {
         self.len == 0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn downcast_ref() {
+        let mut data: [i32; 3] = [0, 1, 2];
+        let any = AnySliceMut::erase(data.as_mut_slice());
+        let copy = any
+            .downcast_ref::<i32>()
+            .expect("any was not a &[i32]")
+            .to_vec();
+
+        assert_eq!(copy.as_slice(), data.as_slice());
+    }
+
+    #[test]
+    fn downcast_mut() {
+        let mut data: [i32; 3] = [0, 1, 2];
+        let mut any = AnySliceMut::erase(data.as_mut_slice());
+        let slice = any.downcast_mut::<i32>().expect("any was not a &mut [i32]");
+
+        slice.fill(0);
+
+        assert_eq!(data, [0, 0, 0]);
+    }
+
+    #[test]
+    fn getters() {
+        let mut data: [i32; 3] = [0, 1, 2];
+        let any = AnySliceMut::erase(data.as_mut_slice());
+
+        assert_eq!(any.type_id(), &TypeId::of::<i32>());
+        assert_eq!(any.len(), 3);
+        assert!(!any.is_empty());
+
+        let mut data: [i32; 0] = [];
+        let any = AnySliceMut::erase(data.as_mut_slice());
+
+        assert_eq!(any.len(), 0);
+        assert!(any.is_empty());
+    }
+}
