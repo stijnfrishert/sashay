@@ -91,6 +91,15 @@ impl<'a> AnySliceMut<'a> {
     }
 }
 
+impl<'a, T> From<&'a mut [T]> for AnySliceMut<'a>
+where
+    T: 'static,
+{
+    fn from(slice: &'a mut [T]) -> Self {
+        AnySliceMut::erase(slice)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

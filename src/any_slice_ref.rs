@@ -66,6 +66,15 @@ impl<'a> AnySliceRef<'a> {
     }
 }
 
+impl<'a, T> From<&'a [T]> for AnySliceRef<'a>
+where
+    T: 'static,
+{
+    fn from(slice: &'a [T]) -> Self {
+        AnySliceRef::erase(slice)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
