@@ -28,11 +28,11 @@ pub struct AnySliceMut<'a> {
 
 impl<'a> AnySliceMut<'a> {
     /// Erase the element type of a slice
-    pub fn erase<U: 'static>(slice: &'a mut [U]) -> Self {
+    pub fn erase<T: 'static>(slice: &'a mut [T]) -> Self {
         Self {
             ptr: erase(slice.into()),
             len: slice.len(),
-            type_id: TypeId::of::<U>(),
+            type_id: TypeId::of::<T>(),
             _lifetime: PhantomData,
         }
     }
@@ -40,12 +40,12 @@ impl<'a> AnySliceMut<'a> {
     /// Try to downcast back to the original slice
     ///
     /// If the type does not match, [`None`] is returned
-    pub fn downcast_ref<U: 'static>(&self) -> Option<&'a [U]> {
-        let expected = TypeId::of::<U>();
+    pub fn downcast_ref<T: 'static>(&self) -> Option<&'a [T]> {
+        let expected = TypeId::of::<T>();
 
         if self.type_id == expected {
             // SAFETY: This is safe, because we've checked that the type ids match
-            let ptr = unsafe { <NonNull<U>>::unerase(self.ptr) };
+            let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
             let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.len) };
@@ -59,12 +59,12 @@ impl<'a> AnySliceMut<'a> {
     /// Try to downcast back to the original slice
     ///
     /// If the type does not match, [`None`] is returned
-    pub fn downcast_mut<U: 'static>(&mut self) -> Option<&'a mut [U]> {
-        let expected = TypeId::of::<U>();
+    pub fn downcast_mut<T: 'static>(&mut self) -> Option<&'a mut [T]> {
+        let expected = TypeId::of::<T>();
 
         if self.type_id == expected {
             // SAFETY: This is safe, because we've checked that the type ids match
-            let ptr = unsafe { <NonNull<U>>::unerase(self.ptr) };
+            let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
             let slice = unsafe { from_raw_parts_mut(ptr.as_ptr(), self.len) };
