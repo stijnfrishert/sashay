@@ -10,10 +10,14 @@
 //! assert_eq!(slice, data.as_slice());
 //! ```
 
+mod any_mut;
+mod any_ref;
 mod any_slice_mut;
 mod any_slice_ptr;
 mod any_slice_ref;
 
+pub use any_mut::AnyMut;
+pub use any_ref::AnyRef;
 pub use any_slice_mut::AnySliceMut;
 pub use any_slice_ptr::AnySlicePtr;
 pub use any_slice_ref::AnySliceRef;
