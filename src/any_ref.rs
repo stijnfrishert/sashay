@@ -48,6 +48,13 @@ impl<'a> AnyRef<'a> {
         }
     }
 
+    /// Try to downcast back to the original reference
+    ///
+    /// If the type does not match, [`None`] is returned
+    pub fn into_ref<T: 'static>(self) -> Option<&'a T> {
+        self.downcast_ref()
+    }
+
     /// The [`TypeId`] of the elements of the original reference that was erased
     pub fn type_id(&self) -> &TypeId {
         &self.type_id
