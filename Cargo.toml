@@ -6,6 +6,7 @@ version = "0.1.0"
 
 authors = ["Stijn Frishert"]
 categories = ["data-structures", "rust-patterns"]
+documentation = "https://docs.rs/sashay/latest/sashay/"
 homepage = "https://github.com/stijnfrishert/sashay"
 keywords = ["any", "slice", "type", "erasure"]
 license = "MIT OR Apache-2.0"
