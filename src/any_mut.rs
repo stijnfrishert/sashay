@@ -100,8 +100,14 @@ mod tests {
     #[test]
     fn downcast_mut() {
         let mut data = 'z';
-        let mut any = AnyMut::erase(&mut data);
-        let reference = any.downcast_mut::<char>().expect("any was not a &mut char");
+        let reference;
+
+        // Create any in new scope, to check if the lifetime
+        // coming out of downcast can outlive it (but not the data)
+        {
+            let mut any = AnyMut::erase(&mut data);
+            reference = any.downcast_mut::<char>().expect("any was not a &mut char");
+        }
 
         *reference = '💤';
 

@@ -70,8 +70,14 @@ mod tests {
     #[test]
     fn downcast_ref() {
         let data = 8;
-        let any = AnyRef::erase(&data);
-        let reference = any.downcast_ref::<i32>().expect("any was not a &i32");
+        let reference;
+
+        // Create any in new scope, to check if the lifetime
+        // coming out of downcast can outlive it (but not the data)
+        {
+            let any = AnyRef::erase(&data);
+            reference = any.downcast_ref::<i32>().expect("any was not a &i32");
+        }
 
         assert_eq!(reference, &data);
     }

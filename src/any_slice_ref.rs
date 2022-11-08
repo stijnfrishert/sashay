@@ -82,8 +82,14 @@ mod tests {
     #[test]
     fn downcast_ref() {
         let data: [i32; 3] = [0, 1, 2];
-        let any = AnySliceRef::erase(data.as_slice());
-        let slice = any.downcast_ref::<i32>().expect("any was not a &[i32]");
+        let slice;
+
+        // Create any in new scope, to check if the lifetime
+        // coming out of downcast can outlive it (but not the data)
+        {
+            let any = AnySliceRef::erase(data.as_slice());
+            slice = any.downcast_ref::<i32>().expect("any was not a &[i32]");
+        }
 
         assert_eq!(slice, data.as_slice());
     }

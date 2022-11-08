@@ -119,8 +119,14 @@ mod tests {
     #[test]
     fn downcast_mut() {
         let mut data: [i32; 3] = [0, 1, 2];
-        let mut any = AnySliceMut::erase(data.as_mut_slice());
-        let slice = any.downcast_mut::<i32>().expect("any was not a &mut [i32]");
+        let slice;
+
+        // Create any in new scope, to check if the lifetime
+        // coming out of downcast can outlive it (but not the data)
+        {
+            let mut any = AnySliceMut::erase(data.as_mut_slice());
+            slice = any.downcast_mut::<i32>().expect("any was not a &mut [i32]");
+        }
 
         slice.fill(0);
 
