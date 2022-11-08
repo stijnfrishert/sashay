@@ -59,6 +59,13 @@ impl<'a> AnySliceMut<'a> {
     /// Try to downcast back to the original slice
     ///
     /// If the type does not match, [`None`] is returned
+    pub fn into_ref<T: 'static>(self) -> Option<&'a [T]> {
+        self.downcast_ref()
+    }
+
+    /// Try to downcast back to the original slice
+    ///
+    /// If the type does not match, [`None`] is returned
     pub fn downcast_mut<T: 'static>(&mut self) -> Option<&'a mut [T]> {
         let expected = TypeId::of::<T>();
 
@@ -73,6 +80,13 @@ impl<'a> AnySliceMut<'a> {
         } else {
             None
         }
+    }
+
+    /// Try to downcast back to the original slice
+    ///
+    /// If the type does not match, [`None`] is returned
+    pub fn into_mut<T: 'static>(mut self) -> Option<&'a mut [T]> {
+        self.downcast_mut()
     }
 
     /// The [`TypeId`] of the elements of the original slice that was erased

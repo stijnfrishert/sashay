@@ -53,6 +53,13 @@ impl<'a> AnyMut<'a> {
     /// Try to downcast back to the original reference
     ///
     /// If the type does not match, [`None`] is returned
+    pub fn into_ref<T: 'static>(self) -> Option<&'a T> {
+        self.downcast_ref()
+    }
+
+    /// Try to downcast back to the original reference
+    ///
+    /// If the type does not match, [`None`] is returned
     pub fn downcast_mut<U: 'static>(&mut self) -> Option<&'a mut U> {
         let expected = TypeId::of::<U>();
 
@@ -67,6 +74,13 @@ impl<'a> AnyMut<'a> {
         } else {
             None
         }
+    }
+
+    /// Try to downcast back to the original reference
+    ///
+    /// If the type does not match, [`None`] is returned
+    pub fn into_mut<T: 'static>(mut self) -> Option<&'a mut T> {
+        self.downcast_mut()
     }
 
     /// The [`TypeId`] of the elements of the original reference that was erased

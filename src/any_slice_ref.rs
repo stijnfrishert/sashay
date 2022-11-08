@@ -50,6 +50,13 @@ impl<'a> AnySliceRef<'a> {
         }
     }
 
+    /// Try to downcast back to the original slice
+    ///
+    /// If the type does not match, [`None`] is returned
+    pub fn into_ref<T: 'static>(self) -> Option<&'a [T]> {
+        self.downcast_ref()
+    }
+
     /// The [`TypeId`] of the elements of the original slice that was erased
     pub fn type_id(&self) -> &TypeId {
         &self.type_id
@@ -83,15 +90,19 @@ mod tests {
     fn downcast_ref() {
         let data: [i32; 3] = [0, 1, 2];
         let slice;
+        let slice2;
 
         // Create any in new scope, to check if the lifetime
         // coming out of downcast can outlive it (but not the data)
         {
             let any = AnySliceRef::erase(data.as_slice());
-            slice = any.downcast_ref::<i32>().expect("any was not a &[i32]");
+            slice = any.into_ref::<i32>().expect("any was not a &[i32]");
+
+            slice2 = any.downcast_ref::<i32>().unwrap();
         }
 
         assert_eq!(slice, data.as_slice());
+        assert_eq!(slice2, data.as_slice());
     }
 
     #[test]
