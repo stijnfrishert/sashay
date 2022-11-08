@@ -1,6 +1,6 @@
 # Sashay
 
-Sashay contains type-erased and life-time erased references that mimic both regular Rust references and slices.
+Sashay contains type-erased and life-time erased types that mimic both regular Rust references and slices.
 
 * `&T` -> `AnyRef`
 * `&mut T` -> `AnyMut`
