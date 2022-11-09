@@ -33,7 +33,10 @@ impl<'a> AnyMut<'a> {
     /// Try to downcast back to the original reference
     ///
     /// If the type does not match, [`None`] is returned
-    pub fn downcast_ref<T: 'static>(&self) -> Option<&'a T> {
+    pub fn downcast_ref<'b, T: 'static>(&'b self) -> Option<&'b T>
+    where
+        'a: 'b,
+    {
         let expected = TypeId::of::<T>();
 
         if self.type_id == expected {
@@ -53,18 +56,33 @@ impl<'a> AnyMut<'a> {
     ///
     /// If the type does not match, [`None`] is returned
     pub fn into_ref<T: 'static>(self) -> Option<&'a T> {
-        self.downcast_ref()
+        let expected = TypeId::of::<T>();
+
+        if self.type_id == expected {
+            // SAFETY: This is safe, because we've checked that the type ids match
+            let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
+
+            // SAFETY: The ptr can't be null and was initialized
+            let reference = unsafe { ptr.as_ref() };
+
+            Some(reference)
+        } else {
+            None
+        }
     }
 
     /// Try to downcast back to the original reference
     ///
     /// If the type does not match, [`None`] is returned
-    pub fn downcast_mut<U: 'static>(&mut self) -> Option<&'a mut U> {
-        let expected = TypeId::of::<U>();
+    pub fn downcast_mut<'b, T: 'static>(&'b mut self) -> Option<&'b mut T>
+    where
+        'a: 'b,
+    {
+        let expected = TypeId::of::<T>();
 
         if self.type_id == expected {
             // SAFETY: This is safe, because we've checked that the type ids match
-            let mut ptr = unsafe { <NonNull<U>>::unerase(self.ptr) };
+            let mut ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The ptr can't be null and was initialized
             let reference = unsafe { ptr.as_mut() };
@@ -78,8 +96,20 @@ impl<'a> AnyMut<'a> {
     /// Try to downcast back to the original reference
     ///
     /// If the type does not match, [`None`] is returned
-    pub fn into_mut<T: 'static>(mut self) -> Option<&'a mut T> {
-        self.downcast_mut()
+    pub fn into_mut<T: 'static>(self) -> Option<&'a mut T> {
+        let expected = TypeId::of::<T>();
+
+        if self.type_id == expected {
+            // SAFETY: This is safe, because we've checked that the type ids match
+            let mut ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
+
+            // SAFETY: The ptr can't be null and was initialized
+            let reference = unsafe { ptr.as_mut() };
+
+            Some(reference)
+        } else {
+            None
+        }
     }
 
     /// The [`TypeId`] of the elements of the original reference that was erased
@@ -113,14 +143,8 @@ mod tests {
     #[test]
     fn downcast_mut() {
         let mut data = 'z';
-        let reference;
-
-        // Create any in new scope, to check if the lifetime
-        // coming out of downcast can outlive it (but not the data)
-        {
-            let mut any = AnyMut::erase(&mut data);
-            reference = any.downcast_mut::<char>().expect("any was not a &mut char");
-        }
+        let mut any = AnyMut::erase(&mut data);
+        let reference = any.downcast_mut::<char>().expect("any was not a &mut char");
 
         *reference = '💤';
 
