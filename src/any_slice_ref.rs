@@ -34,7 +34,10 @@ impl<'a> AnySliceRef<'a> {
     /// Try to downcast back to the original slice
     ///
     /// If the type does not match, [`None`] is returned
-    pub fn downcast_ref<T: 'static>(&self) -> Option<&'a [T]> {
+    pub fn downcast_ref<'b, T: 'static>(&'b self) -> Option<&'b [T]>
+    where
+        'b: 'a,
+    {
         let expected = TypeId::of::<T>();
 
         if self.type_id == expected {
@@ -54,7 +57,19 @@ impl<'a> AnySliceRef<'a> {
     ///
     /// If the type does not match, [`None`] is returned
     pub fn into_ref<T: 'static>(self) -> Option<&'a [T]> {
-        self.downcast_ref()
+        let expected = TypeId::of::<T>();
+
+        if self.type_id == expected {
+            // SAFETY: This is safe, because we've checked that the type ids match
+            let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
+
+            // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
+            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.len) };
+
+            Some(slice)
+        } else {
+            None
+        }
     }
 
     /// The [`TypeId`] of the elements of the original slice that was erased
@@ -89,20 +104,11 @@ mod tests {
     #[test]
     fn downcast_ref() {
         let data: [i32; 3] = [0, 1, 2];
-        let slice;
-        let slice2;
 
-        // Create any in new scope, to check if the lifetime
-        // coming out of downcast can outlive it (but not the data)
-        {
-            let any = AnySliceRef::erase(data.as_slice());
-            slice = any.into_ref::<i32>().expect("any was not a &[i32]");
-
-            slice2 = any.downcast_ref::<i32>().unwrap();
-        }
+        let any = AnySliceRef::erase(data.as_slice());
+        let slice = any.into_ref::<i32>().expect("any was not a &[i32]");
 
         assert_eq!(slice, data.as_slice());
-        assert_eq!(slice2, data.as_slice());
     }
 
     #[test]
