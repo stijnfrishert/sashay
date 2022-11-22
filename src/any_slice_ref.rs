@@ -12,7 +12,7 @@ use std::{any::TypeId, marker::PhantomData, ptr::NonNull, slice::from_raw_parts}
 ///
 /// assert_eq!(slice, data.as_slice());
 /// ```
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct AnySliceRef<'a> {
     pub(super) ptr: ErasedPtr,
     pub(super) len: usize,

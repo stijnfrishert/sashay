@@ -14,6 +14,7 @@ use std::{any::TypeId, marker::PhantomData, ptr::NonNull};
 ///
 /// assert_eq!(data, '💤');
 /// ```
+#[derive(Debug)]
 pub struct AnyMut<'a> {
     pub(super) ptr: ErasedPtr,
     pub(super) type_id: TypeId,

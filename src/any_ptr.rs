@@ -11,7 +11,7 @@ use std::{any::TypeId, marker::PhantomData};
 /// safe, up to the point where you try to dereference one, and so this function is unsafe.
 /// It is up to you to ensure that [`AnyPtr`]'s to the same memory location are never
 /// accessed immutably and mutably at the same time.
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct AnyPtr {
     ptr: ErasedPtr,
     type_id: TypeId,

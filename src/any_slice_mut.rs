@@ -19,6 +19,7 @@ use std::{
 ///
 /// assert_eq!(data, [0, 0, 0]);
 /// ```
+#[derive(Debug)]
 pub struct AnySliceMut<'a> {
     pub(super) ptr: ErasedPtr,
     pub(super) len: usize,

@@ -12,7 +12,7 @@ use std::{any::TypeId, marker::PhantomData, ptr::NonNull};
 ///
 /// assert_eq!(reference, &data);
 /// ```
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct AnyRef<'a> {
     pub(super) ptr: ErasedPtr,
     pub(super) type_id: TypeId,
