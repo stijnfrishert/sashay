@@ -2,7 +2,7 @@
 description = "Type-erased and lifetime-erased references and slices"
 edition = "2021"
 name = "sashay"
-version = "0.2.0"
+version = "0.2.1"
 
 authors = ["Stijn Frishert"]
 categories = ["data-structures", "rust-patterns"]
