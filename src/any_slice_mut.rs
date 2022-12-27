@@ -170,6 +170,17 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
+    /// Convert the mutable slice to an immutable one
+    pub fn into_immutable(self) -> AnySliceRef<'a> {
+        AnySliceRef {
+            ptr: self.ptr,
+            start: self.start,
+            len: self.len,
+            type_id: self.type_id,
+            _lifetime: PhantomData,
+        }
+    }
+
     /// The [`TypeId`] of the elements of the original slice that was erased
     pub fn type_id(&self) -> &TypeId {
         &self.type_id

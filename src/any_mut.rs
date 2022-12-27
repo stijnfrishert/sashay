@@ -126,6 +126,15 @@ impl<'a> AnyMut<'a> {
         }
     }
 
+    /// Convert the mutable reference to an immutable one
+    pub fn into_immutable(self) -> AnyRef<'a> {
+        AnyRef {
+            ptr: self.ptr,
+            type_id: self.type_id,
+            _lifetime: PhantomData,
+        }
+    }
+
     /// The [`TypeId`] of the elements of the original reference that was erased
     pub fn type_id(&self) -> &TypeId {
         &self.type_id
