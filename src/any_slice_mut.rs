@@ -202,4 +202,14 @@ mod tests {
         assert_eq!(any.len(), 0);
         assert!(any.is_empty());
     }
+
+    #[test]
+    fn as_immutable() {
+        let mut data: [i32; 3] = [0, 1, 2];
+        let any = AnySliceMut::erase(data.as_mut_slice());
+        let im1 = any.as_immutable();
+        let im2 = any.as_immutable();
+        assert_eq!(im1.downcast_ref::<i32>().unwrap(), &[0, 1, 2]);
+        assert_eq!(im2.downcast_ref::<i32>().unwrap(), &[0, 1, 2]);
+    }
 }

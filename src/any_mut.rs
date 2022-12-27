@@ -164,4 +164,14 @@ mod tests {
 
         assert_eq!(data, '💤');
     }
+
+    #[test]
+    fn as_immutable() {
+        let mut data = 'z';
+        let any = AnyMut::erase(&mut data);
+        let im1 = any.as_immutable();
+        let im2 = any.as_immutable();
+        assert_eq!(im1.downcast_ref::<char>().unwrap(), &'z');
+        assert_eq!(im2.downcast_ref::<char>().unwrap(), &'z');
+    }
 }
