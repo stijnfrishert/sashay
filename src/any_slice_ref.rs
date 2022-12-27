@@ -76,7 +76,10 @@ impl<'a> AnySliceRef<'a> {
     }
 
     /// Take a sub-slice of the slice
-    pub fn sub(&self, range: Range<usize>) -> AnySliceRef {
+    pub fn sub<'b>(&'b self, range: Range<usize>) -> AnySliceRef<'b>
+    where
+        'a: 'b,
+    {
         let new_range = sub_range(self.start..self.start + self.len, range);
 
         AnySliceRef {

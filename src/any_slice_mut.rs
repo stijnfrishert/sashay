@@ -125,7 +125,10 @@ impl<'a> AnySliceMut<'a> {
     }
 
     /// Take a sub-slice of the slice
-    pub fn sub(&self, range: Range<usize>) -> AnySliceRef {
+    pub fn sub<'b>(&'b self, range: Range<usize>) -> AnySliceRef<'b>
+    where
+        'a: 'b,
+    {
         let new_range = sub_range(self.start..self.start + self.len, range);
 
         AnySliceRef {
@@ -138,7 +141,10 @@ impl<'a> AnySliceMut<'a> {
     }
 
     /// Take a sub-slice of the slice
-    pub fn sub_mut(&mut self, range: Range<usize>) -> AnySliceMut {
+    pub fn sub_mut<'b>(&'b mut self, range: Range<usize>) -> AnySliceMut<'b>
+    where
+        'a: 'b,
+    {
         let new_range = sub_range(self.start..self.start + self.len, range);
 
         AnySliceMut {
