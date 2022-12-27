@@ -1,3 +1,4 @@
+use crate::AnyRef;
 use erasable::{erase, ErasablePtr, ErasedPtr};
 use std::{any::TypeId, marker::PhantomData, ptr::NonNull};
 
@@ -110,6 +111,18 @@ impl<'a> AnyMut<'a> {
             Some(reference)
         } else {
             None
+        }
+    }
+
+    /// Convert the mutable reference to an immutable one
+    pub fn as_immutable<'b>(&'b self) -> AnyRef<'b>
+    where
+        'a: 'b,
+    {
+        AnyRef {
+            ptr: self.ptr,
+            type_id: self.type_id,
+            _lifetime: PhantomData,
         }
     }
 

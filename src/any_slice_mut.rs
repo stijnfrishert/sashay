@@ -1,3 +1,4 @@
+use crate::AnySliceRef;
 use erasable::{erase, ErasablePtr, ErasedPtr};
 use std::{
     any::TypeId,
@@ -117,6 +118,19 @@ impl<'a> AnySliceMut<'a> {
             Some(slice)
         } else {
             None
+        }
+    }
+
+    /// Convert the mutable slice to an immutable one
+    pub fn as_immutable<'b>(&'b self) -> AnySliceRef<'b>
+    where
+        'a: 'b,
+    {
+        AnySliceRef {
+            ptr: self.ptr,
+            len: self.len,
+            type_id: self.type_id,
+            _lifetime: PhantomData,
         }
     }
 
