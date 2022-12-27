@@ -1,8 +1,9 @@
-use crate::AnySliceRef;
+use crate::{sub_range, AnySliceRef};
 use erasable::{erase, ErasablePtr, ErasedPtr};
 use std::{
     any::TypeId,
     marker::PhantomData,
+    ops::Range,
     ptr::NonNull,
     slice::{from_raw_parts, from_raw_parts_mut},
 };
@@ -123,6 +124,32 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
+    /// Take a sub-slice of the slice
+    pub fn sub(&self, range: Range<usize>) -> AnySliceRef {
+        let new_range = sub_range(self.start..self.start + self.len, range);
+
+        AnySliceRef {
+            ptr: self.ptr,
+            start: new_range.start,
+            len: new_range.len(),
+            type_id: self.type_id,
+            _lifetime: PhantomData,
+        }
+    }
+
+    /// Take a sub-slice of the slice
+    pub fn sub_mut(&mut self, range: Range<usize>) -> AnySliceMut {
+        let new_range = sub_range(self.start..self.start + self.len, range);
+
+        AnySliceMut {
+            ptr: self.ptr,
+            start: new_range.start,
+            len: new_range.len(),
+            type_id: self.type_id,
+            _lifetime: PhantomData,
+        }
+    }
+
     /// Convert the mutable slice to an immutable one
     pub fn as_immutable<'b>(&'b self) -> AnySliceRef<'b>
     where
@@ -218,5 +245,17 @@ mod tests {
         let im2 = any.as_immutable();
         assert_eq!(im1.downcast_ref::<i32>().unwrap(), &[0, 1, 2]);
         assert_eq!(im2.downcast_ref::<i32>().unwrap(), &[0, 1, 2]);
+    }
+
+    #[test]
+    fn sub() {
+        let mut data: [i32; 5] = [0, 1, 2, 3, 4];
+        let mut any = AnySliceMut::erase(data.as_mut_slice());
+
+        assert_eq!(any.sub(0..2).downcast_ref::<i32>().unwrap(), &[0, 1]);
+        assert_eq!(any.sub(3..5).downcast_ref::<i32>().unwrap(), &[3, 4]);
+
+        assert_eq!(any.sub_mut(0..2).downcast_ref::<i32>().unwrap(), &[0, 1]);
+        assert_eq!(any.sub_mut(3..5).downcast_ref::<i32>().unwrap(), &[3, 4]);
     }
 }

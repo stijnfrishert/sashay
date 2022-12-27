@@ -1,5 +1,6 @@
+use crate::sub_range;
 use erasable::{erase, ErasablePtr, ErasedPtr};
-use std::{any::TypeId, marker::PhantomData, ptr::NonNull, slice::from_raw_parts};
+use std::{any::TypeId, marker::PhantomData, ops::Range, ptr::NonNull, slice::from_raw_parts};
 
 /// A type-erased immutable slice
 ///
@@ -74,6 +75,19 @@ impl<'a> AnySliceRef<'a> {
         }
     }
 
+    /// Take a sub-slice of the slice
+    pub fn sub(&self, range: Range<usize>) -> AnySliceRef {
+        let new_range = sub_range(self.start..self.start + self.len, range);
+
+        AnySliceRef {
+            ptr: self.ptr,
+            start: new_range.start,
+            len: new_range.len(),
+            type_id: self.type_id,
+            _lifetime: PhantomData,
+        }
+    }
+
     /// The [`TypeId`] of the elements of the original slice that was erased
     pub fn type_id(&self) -> &TypeId {
         &self.type_id
@@ -131,5 +145,14 @@ mod tests {
 
         assert_eq!(any.len(), 0);
         assert!(any.is_empty());
+    }
+
+    #[test]
+    fn sub() {
+        let data: [i32; 5] = [0, 1, 2, 3, 4];
+        let any = AnySliceRef::erase(data.as_slice());
+
+        assert_eq!(any.sub(0..2).downcast_ref::<i32>().unwrap(), &[0, 1]);
+        assert_eq!(any.sub(3..5).downcast_ref::<i32>().unwrap(), &[3, 4]);
     }
 }

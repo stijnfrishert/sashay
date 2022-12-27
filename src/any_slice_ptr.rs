@@ -1,6 +1,6 @@
-use super::{AnySliceMut, AnySliceRef};
+use crate::{sub_range, AnySliceMut, AnySliceRef};
 use erasable::ErasedPtr;
-use std::{any::TypeId, marker::PhantomData};
+use std::{any::TypeId, marker::PhantomData, ops::Range};
 
 /// A type-erased pointer to some slice
 ///
@@ -51,6 +51,18 @@ impl AnySlicePtr {
             len: self.len,
             type_id: self.type_id,
             _lifetime: PhantomData,
+        }
+    }
+
+    /// Take a sub-slice of the slice
+    pub fn sub(&self, range: Range<usize>) -> AnySlicePtr {
+        let new_range = sub_range(self.start..self.start + self.len, range);
+
+        AnySlicePtr {
+            ptr: self.ptr,
+            start: new_range.start,
+            len: new_range.len(),
+            type_id: self.type_id,
         }
     }
 
