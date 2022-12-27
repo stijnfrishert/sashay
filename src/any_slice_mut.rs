@@ -23,6 +23,7 @@ use std::{
 #[derive(Debug)]
 pub struct AnySliceMut<'a> {
     pub(super) ptr: ErasedPtr,
+    pub(super) start: usize,
     pub(super) len: usize,
     pub(super) type_id: TypeId,
     pub(super) _lifetime: PhantomData<&'a mut ()>,
@@ -33,6 +34,7 @@ impl<'a> AnySliceMut<'a> {
     pub fn erase<T: 'static>(slice: &'a mut [T]) -> Self {
         Self {
             ptr: erase(slice.into()),
+            start: 0,
             len: slice.len(),
             type_id: TypeId::of::<T>(),
             _lifetime: PhantomData,
@@ -53,9 +55,9 @@ impl<'a> AnySliceMut<'a> {
             let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
-            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.len) };
+            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.end()) };
 
-            Some(slice)
+            Some(&slice[self.start..])
         } else {
             None
         }
@@ -72,9 +74,9 @@ impl<'a> AnySliceMut<'a> {
             let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
-            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.len) };
+            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.end()) };
 
-            Some(slice)
+            Some(&slice[self.start..])
         } else {
             None
         }
@@ -94,9 +96,9 @@ impl<'a> AnySliceMut<'a> {
             let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
-            let slice = unsafe { from_raw_parts_mut(ptr.as_ptr(), self.len) };
+            let slice = unsafe { from_raw_parts_mut(ptr.as_ptr(), self.end()) };
 
-            Some(slice)
+            Some(&mut slice[self.start..])
         } else {
             None
         }
@@ -113,9 +115,9 @@ impl<'a> AnySliceMut<'a> {
             let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
-            let slice = unsafe { from_raw_parts_mut(ptr.as_ptr(), self.len) };
+            let slice = unsafe { from_raw_parts_mut(ptr.as_ptr(), self.end()) };
 
-            Some(slice)
+            Some(&mut slice[self.start..])
         } else {
             None
         }
@@ -128,6 +130,7 @@ impl<'a> AnySliceMut<'a> {
     {
         AnySliceRef {
             ptr: self.ptr,
+            start: self.start,
             len: self.len,
             type_id: self.type_id,
             _lifetime: PhantomData,
@@ -147,6 +150,10 @@ impl<'a> AnySliceMut<'a> {
     /// Does the slice contain any elements?
     pub fn is_empty(&self) -> bool {
         self.len == 0
+    }
+
+    fn end(&self) -> usize {
+        self.start + self.len
     }
 }
 

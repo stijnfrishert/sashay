@@ -15,6 +15,7 @@ use std::{any::TypeId, marker::PhantomData, ptr::NonNull, slice::from_raw_parts}
 #[derive(Debug, Clone, Copy)]
 pub struct AnySliceRef<'a> {
     pub(super) ptr: ErasedPtr,
+    pub(super) start: usize,
     pub(super) len: usize,
     pub(super) type_id: TypeId,
     pub(super) _lifetime: PhantomData<&'a ()>,
@@ -25,6 +26,7 @@ impl<'a> AnySliceRef<'a> {
     pub fn erase<T: 'static>(slice: &'a [T]) -> Self {
         Self {
             ptr: erase(slice.into()),
+            start: 0,
             len: slice.len(),
             type_id: TypeId::of::<T>(),
             _lifetime: PhantomData,
@@ -45,9 +47,9 @@ impl<'a> AnySliceRef<'a> {
             let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
-            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.len) };
+            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.end()) };
 
-            Some(slice)
+            Some(&slice[self.start..])
         } else {
             None
         }
@@ -64,9 +66,9 @@ impl<'a> AnySliceRef<'a> {
             let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
-            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.len) };
+            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.end()) };
 
-            Some(slice)
+            Some(&slice[self.start..])
         } else {
             None
         }
@@ -85,6 +87,10 @@ impl<'a> AnySliceRef<'a> {
     /// Does the slice contain any elements?
     pub fn is_empty(&self) -> bool {
         self.len == 0
+    }
+
+    fn end(&self) -> usize {
+        self.start + self.len
     }
 }
 

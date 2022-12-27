@@ -14,6 +14,7 @@ use std::{any::TypeId, marker::PhantomData};
 #[derive(Debug, Clone, Copy)]
 pub struct AnySlicePtr {
     ptr: ErasedPtr,
+    start: usize,
     len: usize,
     type_id: TypeId,
 }
@@ -29,6 +30,7 @@ impl AnySlicePtr {
     pub unsafe fn deref<'a>(self) -> AnySliceRef<'a> {
         AnySliceRef {
             ptr: self.ptr,
+            start: self.start,
             len: self.len,
             type_id: self.type_id,
             _lifetime: PhantomData,
@@ -45,6 +47,7 @@ impl AnySlicePtr {
     pub unsafe fn deref_mut<'a>(self) -> AnySliceMut<'a> {
         AnySliceMut {
             ptr: self.ptr,
+            start: self.start,
             len: self.len,
             type_id: self.type_id,
             _lifetime: PhantomData,
@@ -71,6 +74,7 @@ impl<'a> From<AnySliceRef<'a>> for AnySlicePtr {
     fn from(slice: AnySliceRef<'a>) -> Self {
         Self {
             ptr: slice.ptr,
+            start: slice.start,
             len: slice.len,
             type_id: slice.type_id,
         }
@@ -81,6 +85,7 @@ impl<'a> From<AnySliceMut<'a>> for AnySlicePtr {
     fn from(slice: AnySliceMut<'a>) -> Self {
         Self {
             ptr: slice.ptr,
+            start: slice.start,
             len: slice.len,
             type_id: slice.type_id,
         }
