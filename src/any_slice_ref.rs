@@ -1,5 +1,6 @@
+use crate::sub_range;
 use erasable::{erase, ErasablePtr, ErasedPtr};
-use std::{any::TypeId, marker::PhantomData, ptr::NonNull, slice::from_raw_parts};
+use std::{any::TypeId, marker::PhantomData, ops::Range, ptr::NonNull, slice::from_raw_parts};
 
 /// A type-erased immutable slice
 ///
@@ -15,6 +16,7 @@ use std::{any::TypeId, marker::PhantomData, ptr::NonNull, slice::from_raw_parts}
 #[derive(Debug, Clone, Copy)]
 pub struct AnySliceRef<'a> {
     pub(super) ptr: ErasedPtr,
+    pub(super) start: usize,
     pub(super) len: usize,
     pub(super) type_id: TypeId,
     pub(super) _lifetime: PhantomData<&'a ()>,
@@ -25,6 +27,7 @@ impl<'a> AnySliceRef<'a> {
     pub fn erase<T: 'static>(slice: &'a [T]) -> Self {
         Self {
             ptr: erase(slice.into()),
+            start: 0,
             len: slice.len(),
             type_id: TypeId::of::<T>(),
             _lifetime: PhantomData,
@@ -45,9 +48,9 @@ impl<'a> AnySliceRef<'a> {
             let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
-            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.len) };
+            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.end()) };
 
-            Some(slice)
+            Some(&slice[self.start..])
         } else {
             None
         }
@@ -64,11 +67,24 @@ impl<'a> AnySliceRef<'a> {
             let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
 
             // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
-            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.len) };
+            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.end()) };
 
-            Some(slice)
+            Some(&slice[self.start..])
         } else {
             None
+        }
+    }
+
+    /// Take a sub-slice of the slice
+    pub fn sub(&self, range: Range<usize>) -> AnySliceRef {
+        let new_range = sub_range(self.start..self.start + self.len, range);
+
+        AnySliceRef {
+            ptr: self.ptr,
+            start: new_range.start,
+            len: new_range.len(),
+            type_id: self.type_id,
+            _lifetime: PhantomData,
         }
     }
 
@@ -85,6 +101,10 @@ impl<'a> AnySliceRef<'a> {
     /// Does the slice contain any elements?
     pub fn is_empty(&self) -> bool {
         self.len == 0
+    }
+
+    fn end(&self) -> usize {
+        self.start + self.len
     }
 }
 
@@ -125,5 +145,14 @@ mod tests {
 
         assert_eq!(any.len(), 0);
         assert!(any.is_empty());
+    }
+
+    #[test]
+    fn sub() {
+        let data: [i32; 5] = [0, 1, 2, 3, 4];
+        let any = AnySliceRef::erase(data.as_slice());
+
+        assert_eq!(any.sub(0..2).downcast_ref::<i32>().unwrap(), &[0, 1]);
+        assert_eq!(any.sub(3..5).downcast_ref::<i32>().unwrap(), &[3, 4]);
     }
 }
