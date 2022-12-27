@@ -141,10 +141,36 @@ impl<'a> AnySliceMut<'a> {
     }
 
     /// Take a sub-slice of the slice
+    pub fn into_sub(self, range: Range<usize>) -> AnySliceRef<'a> {
+        let new_range = sub_range(self.start..self.start + self.len, range);
+
+        AnySliceRef {
+            ptr: self.ptr,
+            start: new_range.start,
+            len: new_range.len(),
+            type_id: self.type_id,
+            _lifetime: PhantomData,
+        }
+    }
+
+    /// Take a sub-slice of the slice
     pub fn sub_mut<'b>(&'b mut self, range: Range<usize>) -> AnySliceMut<'b>
     where
         'a: 'b,
     {
+        let new_range = sub_range(self.start..self.start + self.len, range);
+
+        AnySliceMut {
+            ptr: self.ptr,
+            start: new_range.start,
+            len: new_range.len(),
+            type_id: self.type_id,
+            _lifetime: PhantomData,
+        }
+    }
+
+    /// Take a sub-slice of the slice
+    pub fn into_sub_mut(self, range: Range<usize>) -> AnySliceMut<'a> {
         let new_range = sub_range(self.start..self.start + self.len, range);
 
         AnySliceMut {

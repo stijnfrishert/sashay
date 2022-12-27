@@ -91,6 +91,19 @@ impl<'a> AnySliceRef<'a> {
         }
     }
 
+    /// Take a sub-slice of the slice
+    pub fn into_sub(self, range: Range<usize>) -> AnySliceRef<'a> {
+        let new_range = sub_range(self.start..self.start + self.len, range);
+
+        AnySliceRef {
+            ptr: self.ptr,
+            start: new_range.start,
+            len: new_range.len(),
+            type_id: self.type_id,
+            _lifetime: PhantomData,
+        }
+    }
+
     /// The [`TypeId`] of the elements of the original slice that was erased
     pub fn type_id(&self) -> &TypeId {
         &self.type_id
