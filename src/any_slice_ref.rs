@@ -1,135 +1,73 @@
-use crate::sub_range;
-use erasable::{erase, ErasablePtr, ErasedPtr};
-use std::{any::TypeId, marker::PhantomData, ops::Range, ptr::NonNull, slice::from_raw_parts};
+use core::{any::TypeId, marker::PhantomData, slice::from_raw_parts};
 
-/// A type-erased immutable slice
-///
-/// # Example
-///
-/// ```
-/// let data : [i32; 3] = [0, 1, 2];
-/// let any = sashay::AnySliceRef::erase(data.as_slice());
-/// let slice = any.downcast_ref::<i32>().expect("any was not a &[i32]");
-///
-/// assert_eq!(slice, data.as_slice());
-/// ```
-#[derive(Debug, Clone, Copy)]
 pub struct AnySliceRef<'a> {
-    pub(super) ptr: ErasedPtr,
-    pub(super) start: usize,
-    pub(super) len: usize,
-    pub(super) type_id: TypeId,
-    pub(super) _lifetime: PhantomData<&'a ()>,
+    /// A pointer to the first element in the slice
+    /// Must be aligned
+    ptr: *const (),
+
+    /// The number of elements in the slice
+    len: usize,
+
+    /// The type if of the elements in the slice
+    /// This is used to ensure we can safely cast back to typed slices
+    type_id: TypeId,
+
+    /// Phantom data to ensure that we stick to the correct lifetime
+    _phantom: PhantomData<&'a ()>,
 }
 
 impl<'a> AnySliceRef<'a> {
-    /// Erase the element type of a slice
-    pub fn erase<T: 'static>(slice: &'a [T]) -> Self {
+    /// Erase the type of a slice's elements
+    pub fn erase<T: 'static>(slice: &'a [T]) -> AnySliceRef<'a> {
         Self {
-            ptr: erase(slice.into()),
-            start: 0,
+            ptr: slice.as_ptr() as *const (),
             len: slice.len(),
             type_id: TypeId::of::<T>(),
-            _lifetime: PhantomData,
+            _phantom: PhantomData,
         }
     }
 
-    /// Try to downcast back to the original slice
+    /// Unerase the type back to a primitive Rust slice
     ///
-    /// If the type does not match, [`None`] is returned
-    pub fn downcast_ref<'b, T: 'static>(&'b self) -> Option<&'b [T]>
-    where
-        'b: 'a,
-    {
-        let expected = TypeId::of::<T>();
-
-        if self.type_id == expected {
-            // SAFETY: This is safe, because we've checked that the type ids match
-            let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
-
-            // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
-            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.end()) };
-
-            Some(&slice[self.start..])
-        } else {
-            None
-        }
+    /// If the the erased slice ref was created with T, you get the original
+    /// slice back. For any other T, this function returns None
+    pub fn unerase<T: 'static>(&self) -> Option<&[T]> {
+        self.contains::<T>().then(|| {
+            // SAFETY:
+            // - We've checked the TypeId of T against the one created at construction, so we're not
+            //   accidentally transmuting to a different type
+            // - The pointer came directly out of a valid slice, so it's not null and aligned
+            unsafe { from_raw_parts(self.ptr as *const T, self.len) }
+        })
     }
 
-    /// Try to downcast back to the original slice
+    /// Unerase the type back to a primitive Rust slice
     ///
-    /// If the type does not match, [`None`] is returned
-    pub fn into_ref<T: 'static>(self) -> Option<&'a [T]> {
-        let expected = TypeId::of::<T>();
-
-        if self.type_id == expected {
-            // SAFETY: This is safe, because we've checked that the type ids match
-            let ptr = unsafe { <NonNull<T>>::unerase(self.ptr) };
-
-            // SAFETY: The length is valid, we got it from the original slice at erasure and the ptr can't be null.
-            let slice = unsafe { from_raw_parts(ptr.as_ptr(), self.end()) };
-
-            Some(&slice[self.start..])
-        } else {
-            None
-        }
+    /// If the the erased slice ref was created with T, you get the original
+    /// slice back. For any other T, this function returns None
+    pub fn unerase_into<T: 'static>(self) -> Option<&'a [T]> {
+        self.contains::<T>().then(|| {
+            // SAFETY:
+            // - We've checked the TypeId of T against the one created at construction, so we're not
+            //   accidentally transmuting to a different type
+            // - The pointer came directly out of a valid slice, so it's not null and aligned
+            unsafe { from_raw_parts(self.ptr as *const T, self.len) }
+        })
     }
 
-    /// Take a sub-slice of the slice
-    pub fn sub<'b>(&'b self, range: Range<usize>) -> AnySliceRef<'b>
-    where
-        'a: 'b,
-    {
-        let new_range = sub_range(self.start..self.start + self.len, range);
-
-        AnySliceRef {
-            ptr: self.ptr,
-            start: new_range.start,
-            len: new_range.len(),
-            type_id: self.type_id,
-            _lifetime: PhantomData,
-        }
-    }
-
-    /// Take a sub-slice of the slice
-    pub fn into_sub(self, range: Range<usize>) -> AnySliceRef<'a> {
-        let new_range = sub_range(self.start..self.start + self.len, range);
-
-        AnySliceRef {
-            ptr: self.ptr,
-            start: new_range.start,
-            len: new_range.len(),
-            type_id: self.type_id,
-            _lifetime: PhantomData,
-        }
-    }
-
-    /// The [`TypeId`] of the elements of the original slice that was erased
-    pub fn type_id(&self) -> &TypeId {
-        &self.type_id
-    }
-
-    /// The length of the original slice that was erased
+    /// How many elements does the slice contain?
     pub fn len(&self) -> usize {
         self.len
     }
 
-    /// Does the slice contain any elements?
+    /// Does the slice contain any elements at all?
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    fn end(&self) -> usize {
-        self.start + self.len
-    }
-}
-
-impl<'a, T> From<&'a [T]> for AnySliceRef<'a>
-where
-    T: 'static,
-{
-    fn from(slice: &'a [T]) -> Self {
-        AnySliceRef::erase(slice)
+    // Does the slice contain elements of type T?
+    pub fn contains<T: 'static>(&self) -> bool {
+        TypeId::of::<T>() == self.type_id
     }
 }
 
@@ -138,37 +76,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn downcast_ref() {
-        let data: [i32; 3] = [0, 1, 2];
-
-        let any = AnySliceRef::erase(data.as_slice());
-        let slice = any.into_ref::<i32>().expect("any was not a &[i32]");
-
-        assert_eq!(slice, data.as_slice());
-    }
-
-    #[test]
-    fn getters() {
-        let data: [i32; 3] = [0, 1, 2];
+    fn erase_unerase() {
+        // Using an (u8, u16) because it has padding
+        let data = [(1u8, 2u16), (3u8, 4u16)];
         let any = AnySliceRef::erase(data.as_slice());
 
-        assert_eq!(any.type_id(), &TypeId::of::<i32>());
-        assert_eq!(any.len(), 3);
+        assert_eq!(any.len(), 2);
         assert!(!any.is_empty());
 
-        let data: [i32; 0] = [];
-        let any = AnySliceRef::erase(data.as_slice());
-
-        assert_eq!(any.len(), 0);
-        assert!(any.is_empty());
-    }
-
-    #[test]
-    fn sub() {
-        let data: [i32; 5] = [0, 1, 2, 3, 4];
-        let any = AnySliceRef::erase(data.as_slice());
-
-        assert_eq!(any.sub(0..2).downcast_ref::<i32>().unwrap(), &[0, 1]);
-        assert_eq!(any.sub(3..5).downcast_ref::<i32>().unwrap(), &[3, 4]);
+        // unerase
+        assert_eq!(any.unerase::<(u8, u16)>(), Some(data.as_slice()));
+        assert_eq!(any.unerase::<u8>(), None);
+        assert_eq!(any.unerase_into::<(u8, u16)>(), Some(data.as_slice()));
     }
 }
