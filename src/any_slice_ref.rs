@@ -6,6 +6,17 @@ use core::{
     slice::from_raw_parts,
 };
 
+/// A type-erased immutable slice
+///
+/// # Example
+///
+/// ```
+/// let data : [i32; 3] = [0, 1, 2];
+/// let any = sashay::AnySliceRef::erase(data.as_slice());
+/// let slice = any.unerase::<i32>().expect("any was not a &[i32]");
+///
+/// assert_eq!(slice, data.as_slice());
+#[derive(Debug, Clone, Copy)]
 pub struct AnySliceRef<'a> {
     /// A pointer to the first element in the slice
     /// Must be aligned
@@ -66,7 +77,7 @@ impl<'a> AnySliceRef<'a> {
     }
 
     /// Create a sub-slice of this slice
-    pub fn sub<R>(&self, range: R) -> AnySliceRef<'_>
+    pub fn sub<R>(&self, range: R) -> AnySliceRef
     where
         R: RangeBounds<usize>,
     {
@@ -128,12 +139,12 @@ impl<'a> AnySliceRef<'a> {
         self.len == 0
     }
 
-    // Does the slice contain elements of type T?
+    /// Does the slice contain elements of type `T`?
     pub fn contains<T: 'static>(&self) -> bool {
         TypeId::of::<T>() == self.type_id
     }
 
-    /// The size_of() of original elements of T
+    /// The `size_of()` of the original slice elements of type `T`
     pub fn stride(&self) -> usize {
         self.stride
     }
