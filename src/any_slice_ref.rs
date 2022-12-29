@@ -133,6 +133,18 @@ impl<'a> AnySliceRef<'a> {
     }
 }
 
+impl<'a, T: 'static> From<&'a [T]> for AnySliceRef<'a> {
+    fn from(slice: &'a [T]) -> Self {
+        Self::erase(slice)
+    }
+}
+
+impl<'a, T: 'static> From<&'a mut [T]> for AnySliceRef<'a> {
+    fn from(slice: &'a mut [T]) -> Self {
+        Self::erase(slice)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
