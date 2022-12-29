@@ -34,7 +34,20 @@ pub struct AnySliceRef<'a> {
 }
 
 impl<'a> AnySliceRef<'a> {
-    pub(crate) fn new(ptr: *const u8, len: usize, stride: usize, type_id: TypeId) -> Self {
+    /// Construct an erased slice from its raw parts
+    ///
+    /// # Safety
+    ///
+    /// Calling this is only defined behaviour if:
+    ///  - All safety rules for `core::slice::from_raw_parts()` hold
+    ///  - `stride` is the correct `size_of()` for the element `T`
+    ///  - `type_id` is the correct `TypeId` for the element `T`
+    pub unsafe fn from_raw_parts(
+        ptr: *const u8,
+        len: usize,
+        stride: usize,
+        type_id: TypeId,
+    ) -> Self {
         Self {
             ptr,
             len,
@@ -46,12 +59,17 @@ impl<'a> AnySliceRef<'a> {
 
     /// Erase the type of a slice's elements
     pub fn erase<T: 'static>(slice: &'a [T]) -> AnySliceRef<'a> {
-        Self::new(
-            slice.as_ptr() as *const u8,
-            slice.len(),
-            size_of::<T>(),
-            TypeId::of::<T>(),
-        )
+        // Safety:
+        //  - The raw parts come from a valid slice
+        //  - The TypeId and stride come directly from the slice element `T`
+        unsafe {
+            Self::from_raw_parts(
+                slice.as_ptr() as *const u8,
+                slice.len(),
+                size_of::<T>(),
+                TypeId::of::<T>(),
+            )
+        }
     }
 
     /// Unerase the type back to an immutable slice
@@ -89,12 +107,18 @@ impl<'a> AnySliceRef<'a> {
     {
         let range = constrain_range(self.len, range);
 
-        Self::new(
-            self.ptr.wrapping_add(self.stride * range.start),
-            range.len(),
-            self.stride,
-            self.type_id,
-        )
+        // Safety:
+        // - The `ptr` is increased in steps of `stride`, so points to a valid and aligned `T`
+        // - `constrain_range()` ensures that the ptr offset and len fall within the original slice range
+        // - `type_id` and `stride` were already valid, and they haven't changed
+        unsafe {
+            Self::from_raw_parts(
+                self.ptr.wrapping_add(self.stride * range.start),
+                range.len(),
+                self.stride,
+                self.type_id,
+            )
+        }
     }
 
     /// Create a sub-slice of this slice
@@ -104,12 +128,18 @@ impl<'a> AnySliceRef<'a> {
     {
         let range = constrain_range(self.len, range);
 
-        Self::new(
-            self.ptr.wrapping_add(self.stride * range.start),
-            range.len(),
-            self.stride,
-            self.type_id,
-        )
+        // Safety:
+        // - The `ptr` is increased in steps of `stride`, so points to a valid and aligned `T`
+        // - `constrain_range()` ensures that the ptr offset and len fall within the original slice range
+        // - `type_id` and `stride` were already valid, and they haven't changed
+        unsafe {
+            Self::from_raw_parts(
+                self.ptr.wrapping_add(self.stride * range.start),
+                range.len(),
+                self.stride,
+                self.type_id,
+            )
+        }
     }
 
     /// How many elements does the slice contain?
