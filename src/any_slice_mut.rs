@@ -102,7 +102,7 @@ impl<'a> AnySliceMut<'a> {
         })
     }
 
-    /// Unerase the type back to a primitive Rust slice
+    /// Unerase the type back into a mutable slice
     ///
     /// If the the erased slice ref was created with T, you get the original
     /// slice back. For any other T, this function returns None
@@ -191,7 +191,7 @@ impl<'a> AnySliceMut<'a> {
         self.ptr.cast::<()>().cast_const()
     }
 
-    // Retrieve an unsafe pointer to the raw slice data
+    // Retrieve an unsafe mutable pointer to the raw slice data
     pub fn as_mut_ptr(&mut self) -> *mut () {
         self.ptr.cast::<()>()
     }

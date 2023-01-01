@@ -86,7 +86,7 @@ impl<'a> AnySliceRef<'a> {
         })
     }
 
-    /// Unerase the type back to an immutable slice
+    /// Unerase the type back into an immutable slice
     ///
     /// If the the erased slice ref was created with T, you get the original
     /// slice back. For any other T, this function returns None
