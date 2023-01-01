@@ -7,17 +7,18 @@ use core::{any::TypeId, marker::PhantomData};
 /// ```
 /// let data : char = '🦀';
 /// let any = sashay::AnyRef::erase(&data);
-/// let reference = any.unerase::<char>().expect("any was not a &char");
+/// let reference = any.unerase::<char>().expect("not a reference to `char`");
 ///
 /// assert_eq!(reference, &data);
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct AnyRef<'a> {
-    /// A pointer to the data referred to
+    /// A raw pointer to the referenced data
     ptr: *const (),
 
-    /// The TypeId of the referred to data
-    /// This is used to ensure we can safely cast back to typed references
+    /// A unique id representing the type of the referenced data
+    ///
+    /// This is used to ensure we can safely unerase back without accidentally transmuting
     type_id: TypeId,
 
     /// Phantom data to ensure that we stick to the correct lifetime
@@ -25,6 +26,14 @@ pub struct AnyRef<'a> {
 }
 
 impl<'a> AnyRef<'a> {
+    /// Erase the type of a reference
+    pub fn erase<T: 'static>(reference: &'a T) -> AnyRef<'a> {
+        // Safety:
+        //  - The raw parts come from a valid reference
+        //  - The TypeId is provided by the compiler
+        unsafe { Self::from_raw_parts((reference as *const T).cast::<()>(), TypeId::of::<T>()) }
+    }
+
     /// Construct an erased reference from its raw parts
     ///
     /// # Safety
@@ -38,14 +47,6 @@ impl<'a> AnyRef<'a> {
             type_id,
             _phantom: PhantomData,
         }
-    }
-
-    /// Erase the type of a reference
-    pub fn erase<T: 'static>(reference: &'a T) -> AnyRef<'a> {
-        // Safety:
-        //  - The raw parts come from a valid reference
-        //  - The TypeId comes directly from the reference `T`
-        unsafe { Self::from_raw_parts((reference as *const T).cast::<()>(), TypeId::of::<T>()) }
     }
 
     /// Unerase the type back to an immutable reference

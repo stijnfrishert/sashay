@@ -9,31 +9,45 @@ use core::{
 
 /// A type-erased mutable slice
 ///
-/// # Example
+/// A dynamically sized mutable view into contiguous memory, just like regular Rust primitive
+/// [slices](https://doc.rust-lang.org/std/primitive.slice.html), except that the type of the
+/// individual elements is erased. This allows you to deal with and *store* slices of different
+/// element types within the same collection.
 ///
 /// ```
+/// // Slices can be erased...
 /// let mut data : [i32; 3] = [0, 1, 2];
 /// let mut any = sashay::AnySliceMut::erase(data.as_mut_slice());
-/// let slice = any.unerase_mut::<i32>().expect("any was not a &mut [i32]");
 ///
+/// assert_eq!(any.len(), 3);
+/// assert_eq!(any.stride(), core::mem::size_of::<i32>());
+///
+/// // ...and unerased back to their original slice
+/// let slice = any.unerase_mut::<i32>().expect("not a reference to `[i32]`");
 /// slice.fill(0);
 ///
 /// assert_eq!(data, [0, 0, 0]);
 /// ```
 #[derive(Debug)]
 pub struct AnySliceMut<'a> {
-    /// A pointer to the first element in the slice
-    /// Must be aligned
+    /// A raw pointer to the referenced slice
+    ///
+    /// Note: this pointer must be aligned and point to valid values of `T` at
+    /// subsequent positions along the stride
     ptr: *mut u8,
 
-    /// The number of elements in the slice
+    /// The number of elements in referenced slice
     len: usize,
 
-    /// The byte size/stride of the original element type
+    /// The stride of the elements in the slice
+    ///
+    /// This is equal to the `size_of()` of the individual elements in the slice,
+    /// such that ptr + N * stride points to subsequent elements
     stride: usize,
 
-    /// The TypeId of the elements in the slice
-    /// This is used to ensure we can safely cast back to typed slices
+    /// A unique id representing the type of the referenced slice elements
+    ///
+    /// This is used to ensure we can safely unerase back without accidentally transmuting
     type_id: TypeId,
 
     /// Phantom data to ensure that we stick to the correct lifetime
@@ -41,29 +55,11 @@ pub struct AnySliceMut<'a> {
 }
 
 impl<'a> AnySliceMut<'a> {
-    /// Construct an erased slice from its raw parts
-    ///
-    /// # Safety
-    ///
-    /// Calling this is only defined behaviour if:
-    ///  - All safety rules for `core::slice::from_raw_parts_mut()` hold
-    ///  - `stride` is the correct `size_of()` for the element `T`
-    ///  - `type_id` is the correct `TypeId` for the element `T`
-    pub unsafe fn from_raw_parts(ptr: *mut (), len: usize, stride: usize, type_id: TypeId) -> Self {
-        Self {
-            ptr: ptr.cast::<u8>(),
-            len,
-            stride,
-            type_id,
-            _phantom: PhantomData,
-        }
-    }
-
     /// Erase the type of a slice's elements
     pub fn erase<T: 'static>(slice: &'a mut [T]) -> AnySliceMut<'a> {
         // Safety:
         //  - The raw parts come from a valid slice
-        //  - The TypeId and stride come directly from the slice element `T`
+        //  - The TypeId and stride are provided by the compiler
         unsafe {
             Self::from_raw_parts(
                 slice.as_mut_ptr().cast::<()>(),
@@ -71,6 +67,36 @@ impl<'a> AnySliceMut<'a> {
                 size_of::<T>(),
                 TypeId::of::<T>(),
             )
+        }
+    }
+
+    /// Construct an erased slice from its raw parts.
+    ///
+    /// If you already have a `&mut [T]`, it is recommended to call [`erase()`](AnySliceRef::erase()).
+    ///
+    /// This function follows the same API as [`from_raw_parts_mut()`](https://doc.rust-lang.org/std/slice/fn.from_raw_parts_mut.html)
+    /// with some additions. The parameters `ptr` and `len` represent the slice memory, though be
+    /// aware that `len` is the number of *elements* in the slice, not the byte count. To represent a
+    /// pointer of any type, `*mut ()` is used. If you have a `*mut T`, you can cast it using
+    /// [`ptr::cast()`](https://doc.rust-lang.org/std/primitive.pointer.html#method.cast).
+    ///
+    /// Moreover, this function also takes `stride` (the [`size_of()`](https://doc.rust-lang.org/std/mem/fn.size_of.html)
+    /// or byte count including padding of the individual elements) and a unique `type_id` representing the type
+    /// of the elements.
+    ///
+    /// # Safety
+    ///
+    /// Calling this is only defined behaviour if:
+    ///  - All safety rules for [`from_raw_parts_mut()`](https://doc.rust-lang.org/std/slice/fn.from_raw_parts_mut.html) hold
+    ///  - `stride` is the correct [`size_of()`](https://doc.rust-lang.org/std/mem/fn.size_of.html) for the element type `T` (including padding and such)
+    ///  - `type_id` is the correct [`TypeId`](https://doc.rust-lang.org/stable/std/any/struct.TypeId.html) for the element type `T`
+    pub unsafe fn from_raw_parts(ptr: *mut (), len: usize, stride: usize, type_id: TypeId) -> Self {
+        Self {
+            ptr: ptr.cast::<u8>(),
+            len,
+            stride,
+            type_id,
+            _phantom: PhantomData,
         }
     }
 

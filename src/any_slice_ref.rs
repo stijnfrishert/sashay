@@ -3,30 +3,46 @@ use core::{
     any::TypeId, marker::PhantomData, mem::size_of, ops::RangeBounds, slice::from_raw_parts,
 };
 
-/// A type-erased immutable slice
+/// A type-erased immutable slice.
 ///
-/// # Example
+/// A dynamically sized view into contiguous memory, just like regular Rust primitive
+/// [slices](https://doc.rust-lang.org/std/primitive.slice.html), except that the type of the
+/// individual elements is erased. This allows you to deal with and *store* slices of different
+/// element types within the same collection.
 ///
 /// ```
+/// // Slices can be erased...
 /// let data : [i32; 3] = [0, 1, 2];
 /// let any = sashay::AnySliceRef::erase(data.as_slice());
-/// let slice = any.unerase::<i32>().expect("any was not a &[i32]");
 ///
-/// assert_eq!(slice, data.as_slice());
+/// assert_eq!(any.len(), 3);
+/// assert_eq!(any.stride(), core::mem::size_of::<i32>());
+///
+/// // ...and unerased back to their original slice
+/// let slice = any.unerase::<i32>().expect("not a reference to `[i32]`");
+///
+/// assert_eq!(slice, [0, 1, 2].as_slice());
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct AnySliceRef<'a> {
-    /// A pointer to the first element in the slice
-    /// Must be aligned
+    /// A raw pointer to the referenced slice
+    ///
+    /// Note: this pointer must be aligned and point to valid values of `T` at
+    /// subsequent positions along the stride
     ptr: *const u8,
 
-    /// The number of elements in the slice
+    /// The number of elements in referenced slice
     len: usize,
 
-    /// The byte size/stride of the original element type
+    /// The stride of the elements in the slice
+    ///
+    /// This is equal to the `size_of()` of the individual elements in the slice,
+    /// such that ptr + N * stride points to subsequent elements
     stride: usize,
 
-    /// The TypeId of the elements in the slice
-    /// This is used to ensure we can safely cast back to typed slices
+    /// A unique id representing the type of the referenced slice elements
+    ///
+    /// This is used to ensure we can safely unerase back without accidentally transmuting
     type_id: TypeId,
 
     /// Phantom data to ensure that we stick to the correct lifetime
@@ -34,14 +50,41 @@ pub struct AnySliceRef<'a> {
 }
 
 impl<'a> AnySliceRef<'a> {
-    /// Construct an erased slice from its raw parts
+    /// Erase the type of a slice's elements
+    pub fn erase<T: 'static>(slice: &'a [T]) -> AnySliceRef<'a> {
+        // Safety:
+        //  - The raw parts come from a valid slice
+        //  - The TypeId and stride are provided by the compiler
+        unsafe {
+            Self::from_raw_parts(
+                slice.as_ptr().cast::<()>(),
+                slice.len(),
+                size_of::<T>(),
+                TypeId::of::<T>(),
+            )
+        }
+    }
+
+    /// Construct an erased slice from its raw parts.
+    ///
+    /// If you already have a `&[T]`, it is recommended to call [`erase()`](AnySliceRef::erase()).
+    ///
+    /// This function follows the same API as [`from_raw_parts()`](https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html)
+    /// with some additions. The parameters `ptr` and `len` represent the slice memory, though be
+    /// aware that `len` is the number of *elements* in the slice, not the byte count. To represent a
+    /// pointer of any type, `*const ()` is used. If you have a `*const T`, you can cast it using
+    /// [`ptr::cast()`](https://doc.rust-lang.org/std/primitive.pointer.html#method.cast).
+    ///
+    /// Moreover, this function also takes `stride` (the [`size_of()`](https://doc.rust-lang.org/std/mem/fn.size_of.html)
+    /// or byte count including padding of the individual elements) and a unique `type_id` representing the type
+    /// of the elements.
     ///
     /// # Safety
     ///
     /// Calling this is only defined behaviour if:
-    ///  - All safety rules for `core::slice::from_raw_parts()` hold
-    ///  - `stride` is the correct `size_of()` for the element `T`
-    ///  - `type_id` is the correct `TypeId` for the element `T`
+    ///  - All safety rules for [`from_raw_parts()`](https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html) hold
+    ///  - `stride` is the correct [`size_of()`](https://doc.rust-lang.org/std/mem/fn.size_of.html) for the element type `T` (including padding and such)
+    ///  - `type_id` is the correct [`TypeId`](https://doc.rust-lang.org/stable/std/any/struct.TypeId.html) for the element type `T`
     pub const unsafe fn from_raw_parts(
         ptr: *const (),
         len: usize,
@@ -54,21 +97,6 @@ impl<'a> AnySliceRef<'a> {
             stride,
             type_id,
             _phantom: PhantomData,
-        }
-    }
-
-    /// Erase the type of a slice's elements
-    pub fn erase<T: 'static>(slice: &'a [T]) -> AnySliceRef<'a> {
-        // Safety:
-        //  - The raw parts come from a valid slice
-        //  - The TypeId and stride come directly from the slice element `T`
-        unsafe {
-            Self::from_raw_parts(
-                slice.as_ptr().cast::<()>(),
-                slice.len(),
-                size_of::<T>(),
-                TypeId::of::<T>(),
-            )
         }
     }
 
