@@ -42,7 +42,7 @@ impl<'a> AnySliceRef<'a> {
     ///  - All safety rules for `core::slice::from_raw_parts()` hold
     ///  - `stride` is the correct `size_of()` for the element `T`
     ///  - `type_id` is the correct `TypeId` for the element `T`
-    pub unsafe fn from_raw_parts(
+    pub const unsafe fn from_raw_parts(
         ptr: *const (),
         len: usize,
         stride: usize,
@@ -147,17 +147,17 @@ impl<'a> AnySliceRef<'a> {
     }
 
     // Retrieve an unsafe pointer to the raw slice data
-    pub fn as_ptr(&self) -> *const () {
+    pub const fn as_ptr(&self) -> *const () {
         self.ptr.cast::<()>()
     }
 
     /// How many elements does the slice contain?
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Does the slice contain any elements at all?
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
@@ -167,7 +167,7 @@ impl<'a> AnySliceRef<'a> {
     }
 
     /// The `size_of()` of the original slice elements of type `T`
-    pub fn stride(&self) -> usize {
+    pub const fn stride(&self) -> usize {
         self.stride
     }
 }

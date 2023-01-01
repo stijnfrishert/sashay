@@ -187,7 +187,7 @@ impl<'a> AnySliceMut<'a> {
     }
 
     // Retrieve an unsafe immutable pointer to the raw slice data
-    pub fn as_ptr(&self) -> *const () {
+    pub const fn as_ptr(&self) -> *const () {
         self.ptr.cast::<()>().cast_const()
     }
 
@@ -197,12 +197,12 @@ impl<'a> AnySliceMut<'a> {
     }
 
     /// How many elements does the slice contain?
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Does the slice contain any elements at all?
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
@@ -212,7 +212,7 @@ impl<'a> AnySliceMut<'a> {
     }
 
     /// The `size_of()` of the original slice elements of type `T`
-    pub fn stride(&self) -> usize {
+    pub const fn stride(&self) -> usize {
         self.stride
     }
 }
