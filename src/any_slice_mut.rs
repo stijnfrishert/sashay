@@ -117,7 +117,7 @@ impl<'a> AnySliceMut<'a> {
     }
 
     /// Create a sub-slice of this slice
-    pub fn sub<R>(&self, range: R) -> AnySliceRef
+    pub fn slice<R>(&self, range: R) -> AnySliceRef
     where
         R: RangeBounds<usize>,
     {
@@ -141,7 +141,7 @@ impl<'a> AnySliceMut<'a> {
     }
 
     /// Create a sub-slice of this slice
-    pub fn sub_mut<R>(&mut self, range: R) -> AnySliceMut
+    pub fn slice_mut<R>(&mut self, range: R) -> AnySliceMut
     where
         R: RangeBounds<usize>,
     {
@@ -164,7 +164,7 @@ impl<'a> AnySliceMut<'a> {
     }
 
     /// Create a sub-slice of this slice
-    pub fn sub_into<R>(self, range: R) -> AnySliceMut<'a>
+    pub fn slice_into<R>(self, range: R) -> AnySliceMut<'a>
     where
         R: RangeBounds<usize>,
     {
@@ -264,7 +264,7 @@ mod tests {
         let mut any = AnySliceMut::erase(data.as_mut_slice());
 
         // sub_mut()
-        let unerased_sub = any.sub_mut(3..).unerase_into::<(u8, u16)>().unwrap();
+        let unerased_sub = any.slice_mut(3..).unerase_into::<(u8, u16)>().unwrap();
         unerased_sub.fill((10u8, 10u16));
 
         assert_eq!(

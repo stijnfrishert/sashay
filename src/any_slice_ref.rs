@@ -101,7 +101,7 @@ impl<'a> AnySliceRef<'a> {
     }
 
     /// Create a sub-slice of this slice
-    pub fn sub<R>(&self, range: R) -> AnySliceRef
+    pub fn slice<R>(&self, range: R) -> AnySliceRef
     where
         R: RangeBounds<usize>,
     {
@@ -124,7 +124,7 @@ impl<'a> AnySliceRef<'a> {
     }
 
     /// Create a sub-slice of this slice
-    pub fn sub_into<R>(self, range: R) -> AnySliceRef<'a>
+    pub fn slice_into<R>(self, range: R) -> AnySliceRef<'a>
     where
         R: RangeBounds<usize>,
     {
@@ -217,16 +217,19 @@ mod tests {
         let any = AnySliceRef::erase(data.as_slice());
 
         // sub()
-        assert_eq!(any.sub(0..2).unerase::<(u8, u16)>(), Some(&data[0..2])); // Range
-        assert_eq!(any.sub(3..7).unerase::<(u8, u16)>(), Some(&data[3..5]));
-        assert_eq!(any.sub(..3).unerase::<(u8, u16)>(), Some(&data[..3]));
-        assert_eq!(any.sub(7..).unerase::<(u8, u16)>(), Some(&data[5..])); // RangeFrom
-        assert_eq!(any.sub(..).unerase::<(u8, u16)>(), Some(&data[..])); // RangeFull
-        assert_eq!(any.sub(1..=2).unerase::<(u8, u16)>(), Some(&data[1..=2])); // RangeInclusive
-        assert_eq!(any.sub(..4).unerase::<(u8, u16)>(), Some(&data[..4])); // RangeTo
-        assert_eq!(any.sub(..=2).unerase::<(u8, u16)>(), Some(&data[..=2])); // RangeToInclusive
+        assert_eq!(any.slice(0..2).unerase::<(u8, u16)>(), Some(&data[0..2])); // Range
+        assert_eq!(any.slice(3..7).unerase::<(u8, u16)>(), Some(&data[3..5]));
+        assert_eq!(any.slice(..3).unerase::<(u8, u16)>(), Some(&data[..3]));
+        assert_eq!(any.slice(7..).unerase::<(u8, u16)>(), Some(&data[5..])); // RangeFrom
+        assert_eq!(any.slice(..).unerase::<(u8, u16)>(), Some(&data[..])); // RangeFull
+        assert_eq!(any.slice(1..=2).unerase::<(u8, u16)>(), Some(&data[1..=2])); // RangeInclusive
+        assert_eq!(any.slice(..4).unerase::<(u8, u16)>(), Some(&data[..4])); // RangeTo
+        assert_eq!(any.slice(..=2).unerase::<(u8, u16)>(), Some(&data[..=2])); // RangeToInclusive
 
         // sub_into()
-        assert_eq!(any.sub_into(0..2).unerase::<(u8, u16)>(), Some(&data[0..2]));
+        assert_eq!(
+            any.slice_into(0..2).unerase::<(u8, u16)>(),
+            Some(&data[0..2])
+        );
     }
 }
