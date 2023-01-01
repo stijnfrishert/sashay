@@ -26,7 +26,7 @@ pub struct AnyRef<'a> {
 }
 
 impl<'a> AnyRef<'a> {
-    /// Erase the type of a reference
+    /// Erase the type of an immutable reference.
     pub fn erase<T: 'static>(reference: &'a T) -> AnyRef<'a> {
         // Safety:
         //  - The raw parts come from a valid reference
@@ -85,6 +85,11 @@ impl<'a> AnyRef<'a> {
     /// Does the slice contain elements of type `T`?
     pub fn contains<T: 'static>(&self) -> bool {
         TypeId::of::<T>() == self.type_id
+    }
+
+    /// A unique type id representing the original reference type `T`
+    pub const fn type_id(&self) -> &TypeId {
+        &self.type_id
     }
 }
 

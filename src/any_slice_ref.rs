@@ -50,7 +50,7 @@ pub struct AnySliceRef<'a> {
 }
 
 impl<'a> AnySliceRef<'a> {
-    /// Erase the type of a slice's elements
+    /// Erase the type of an immutable slice's elements.
     pub fn erase<T: 'static>(slice: &'a [T]) -> AnySliceRef<'a> {
         // Safety:
         //  - The raw parts come from a valid slice
@@ -198,6 +198,11 @@ impl<'a> AnySliceRef<'a> {
     pub const fn stride(&self) -> usize {
         self.stride
     }
+
+    /// A unique type id representing the original slice element `T`
+    pub const fn type_id(&self) -> &TypeId {
+        &self.type_id
+    }
 }
 
 impl<'a, T: 'static> From<&'a [T]> for AnySliceRef<'a> {
@@ -225,6 +230,7 @@ mod tests {
 
         assert_eq!(any.len(), 2);
         assert!(!any.is_empty());
+        assert_eq!(any.type_id(), &TypeId::of::<(u8, u16)>());
 
         // unerase()
         assert_eq!(any.unerase::<u8>(), None);

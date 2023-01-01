@@ -28,7 +28,7 @@ pub struct AnyMut<'a> {
 }
 
 impl<'a> AnyMut<'a> {
-    /// Erase the type of a reference
+    /// Erase the type of a mutable reference.
     pub fn erase<T: 'static>(reference: &'a mut T) -> AnyMut<'a> {
         // Safety:
         //  - The raw parts come from a valid reference
@@ -106,6 +106,11 @@ impl<'a> AnyMut<'a> {
     /// Does the slice contain elements of type `T`?
     pub fn contains<T: 'static>(&self) -> bool {
         TypeId::of::<T>() == self.type_id
+    }
+
+    /// A unique type id representing the original reference type `T`
+    pub const fn type_id(&self) -> &TypeId {
+        &self.type_id
     }
 }
 
