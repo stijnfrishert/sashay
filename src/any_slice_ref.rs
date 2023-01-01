@@ -43,13 +43,13 @@ impl<'a> AnySliceRef<'a> {
     ///  - `stride` is the correct `size_of()` for the element `T`
     ///  - `type_id` is the correct `TypeId` for the element `T`
     pub unsafe fn from_raw_parts(
-        ptr: *const u8,
+        ptr: *const (),
         len: usize,
         stride: usize,
         type_id: TypeId,
     ) -> Self {
         Self {
-            ptr,
+            ptr: ptr.cast::<u8>(),
             len,
             stride,
             type_id,
@@ -64,7 +64,7 @@ impl<'a> AnySliceRef<'a> {
         //  - The TypeId and stride come directly from the slice element `T`
         unsafe {
             Self::from_raw_parts(
-                slice.as_ptr() as *const u8,
+                slice.as_ptr().cast::<()>(),
                 slice.len(),
                 size_of::<T>(),
                 TypeId::of::<T>(),
@@ -82,7 +82,7 @@ impl<'a> AnySliceRef<'a> {
             // - We've checked the TypeId of T against the one created at construction, so we're not
             //   accidentally transmuting to a different type
             // - The pointer came directly out of a valid slice, so it's not null and aligned
-            unsafe { from_raw_parts(self.ptr as *const T, self.len) }
+            unsafe { from_raw_parts(self.ptr.cast::<T>(), self.len) }
         })
     }
 
@@ -96,7 +96,7 @@ impl<'a> AnySliceRef<'a> {
             // - We've checked the TypeId of T against the one created at construction, so we're not
             //   accidentally transmuting to a different type
             // - The pointer came directly out of a valid slice, so it's not null and aligned
-            unsafe { from_raw_parts(self.ptr as *const T, self.len) }
+            unsafe { from_raw_parts(self.ptr.cast::<T>(), self.len) }
         })
     }
 
@@ -113,7 +113,9 @@ impl<'a> AnySliceRef<'a> {
         // - `type_id` and `stride` were already valid, and they haven't changed
         unsafe {
             Self::from_raw_parts(
-                self.ptr.wrapping_add(self.stride * range.start),
+                self.ptr
+                    .wrapping_add(self.stride * range.start)
+                    .cast::<()>(),
                 range.len(),
                 self.stride,
                 self.type_id,
@@ -134,12 +136,19 @@ impl<'a> AnySliceRef<'a> {
         // - `type_id` and `stride` were already valid, and they haven't changed
         unsafe {
             Self::from_raw_parts(
-                self.ptr.wrapping_add(self.stride * range.start),
+                self.ptr
+                    .wrapping_add(self.stride * range.start)
+                    .cast::<()>(),
                 range.len(),
                 self.stride,
                 self.type_id,
             )
         }
+    }
+
+    // Retrieve an unsafe pointer to the raw slice data
+    pub fn as_ptr(&self) -> *const () {
+        self.ptr.cast::<()>()
     }
 
     /// How many elements does the slice contain?

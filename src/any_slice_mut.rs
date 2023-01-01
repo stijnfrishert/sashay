@@ -51,7 +51,7 @@ impl<'a> AnySliceMut<'a> {
     ///  - `type_id` is the correct `TypeId` for the element `T`
     pub unsafe fn from_raw_parts(ptr: *mut (), len: usize, stride: usize, type_id: TypeId) -> Self {
         Self {
-            ptr: ptr as *mut u8,
+            ptr: ptr.cast::<u8>(),
             len,
             stride,
             type_id,
@@ -66,7 +66,7 @@ impl<'a> AnySliceMut<'a> {
         //  - The TypeId and stride come directly from the slice element `T`
         unsafe {
             Self::from_raw_parts(
-                slice.as_mut_ptr() as *mut (),
+                slice.as_mut_ptr().cast::<()>(),
                 slice.len(),
                 size_of::<T>(),
                 TypeId::of::<T>(),
@@ -84,7 +84,7 @@ impl<'a> AnySliceMut<'a> {
             // - We've checked the TypeId of T against the one created at construction, so we're not
             //   accidentally transmuting to a different type
             // - The pointer came directly out of a valid slice, so it's not null and aligned
-            unsafe { from_raw_parts(self.ptr as *const T, self.len) }
+            unsafe { from_raw_parts(self.ptr.cast::<T>().cast_const(), self.len) }
         })
     }
 
@@ -98,7 +98,7 @@ impl<'a> AnySliceMut<'a> {
             // - We've checked the TypeId of T against the one created at construction, so we're not
             //   accidentally transmuting to a different type
             // - The pointer came directly out of a valid slice, so it's not null and aligned
-            unsafe { from_raw_parts_mut(self.ptr as *mut T, self.len) }
+            unsafe { from_raw_parts_mut(self.ptr.cast::<T>(), self.len) }
         })
     }
 
@@ -112,7 +112,7 @@ impl<'a> AnySliceMut<'a> {
             // - We've checked the TypeId of T against the one created at construction, so we're not
             //   accidentally transmuting to a different type
             // - The pointer came directly out of a valid slice, so it's not null and aligned
-            unsafe { from_raw_parts_mut(self.ptr as *mut T, self.len) }
+            unsafe { from_raw_parts_mut(self.ptr.cast::<T>(), self.len) }
         })
     }
 
@@ -129,7 +129,10 @@ impl<'a> AnySliceMut<'a> {
         // - `type_id` and `stride` were already valid, and they haven't changed
         unsafe {
             AnySliceRef::from_raw_parts(
-                self.ptr.wrapping_add(self.stride * range.start),
+                self.ptr
+                    .wrapping_add(self.stride * range.start)
+                    .cast::<()>()
+                    .cast_const(),
                 range.len(),
                 self.stride,
                 self.type_id,
@@ -150,7 +153,9 @@ impl<'a> AnySliceMut<'a> {
         // - `type_id` and `stride` were already valid, and they haven't changed
         unsafe {
             Self::from_raw_parts(
-                self.ptr.wrapping_add(self.stride * range.start) as *mut (),
+                self.ptr
+                    .wrapping_add(self.stride * range.start)
+                    .cast::<()>(),
                 range.len(),
                 self.stride,
                 self.type_id,
@@ -171,12 +176,24 @@ impl<'a> AnySliceMut<'a> {
         // - `type_id` and `stride` were already valid, and they haven't changed
         unsafe {
             Self::from_raw_parts(
-                self.ptr.wrapping_add(self.stride * range.start) as *mut (),
+                self.ptr
+                    .wrapping_add(self.stride * range.start)
+                    .cast::<()>(),
                 range.len(),
                 self.stride,
                 self.type_id,
             )
         }
+    }
+
+    // Retrieve an unsafe immutable pointer to the raw slice data
+    pub fn as_ptr(&self) -> *const () {
+        self.ptr.cast::<()>().cast_const()
+    }
+
+    // Retrieve an unsafe pointer to the raw slice data
+    pub fn as_mut_ptr(&mut self) -> *mut () {
+        self.ptr.cast::<()>()
     }
 
     /// How many elements does the slice contain?
