@@ -1,4 +1,4 @@
-use crate::{range::constrain_range, AnySliceRef};
+use crate::{range::constrain_range, AnyMut, AnyRef, AnySliceRef};
 use core::{
     any::TypeId,
     marker::PhantomData,
@@ -180,6 +180,68 @@ impl<'a> AnySliceMut<'a> {
             // - The pointer came directly out of a valid slice, so it's not null and aligned
             unsafe { from_raw_parts_mut(self.ptr.cast::<T>(), self.len) }
         })
+    }
+
+    /// Retrieve an immutable reference to one of the elements in the slice
+    ///
+    /// ```
+    /// let mut data : [i32; 3] = [0, 1, 2];
+    /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///
+    /// assert_eq!(any.get(1).unwrap().unerase_into::<i32>(), Some(&1));
+    /// ```
+    pub fn get(&self, index: usize) -> Option<AnyRef> {
+        if index < self.len {
+            // SAFETY:
+            // - The index is within the slice length, so we don't go out of bounds
+            // - We've checked the TypeId of T against the one created at construction, so we're not
+            //   accidentally transmuting to a different type
+            // - The pointer came directly out of a valid slice, and we're jumping from it using a valid stride
+            let reference = unsafe {
+                AnyRef::from_raw_parts(
+                    self.ptr
+                        .wrapping_add(index * self.stride)
+                        .cast::<()>()
+                        .cast_const(),
+                    self.type_id,
+                )
+            };
+
+            Some(reference)
+        } else {
+            None
+        }
+    }
+
+    /// Retrieve a mutable reference to one of the elements in the slice
+    ///
+    /// ```
+    /// let mut data : [i32; 3] = [0, 1, 2];
+    /// let mut any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///
+    /// let reference = any.get_mut(1).unwrap().unerase_into::<i32>().unwrap();
+    /// *reference = 4;
+    ///
+    /// assert_eq!(data, [0, 4, 2]);
+    /// ```
+    pub fn get_mut(&mut self, index: usize) -> Option<AnyMut> {
+        if index < self.len {
+            // SAFETY:
+            // - The index is within the slice length, so we don't go out of bounds
+            // - We've checked the TypeId of T against the one created at construction, so we're not
+            //   accidentally transmuting to a different type
+            // - The pointer came directly out of a valid slice, and we're jumping from it using a valid stride
+            let reference = unsafe {
+                AnyMut::from_raw_parts(
+                    self.ptr.wrapping_add(index * self.stride).cast::<()>(),
+                    self.type_id,
+                )
+            };
+
+            Some(reference)
+        } else {
+            None
+        }
     }
 
     /// Create a sub-slice of this slice

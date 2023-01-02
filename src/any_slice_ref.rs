@@ -1,4 +1,4 @@
-use crate::range::constrain_range;
+use crate::{range::constrain_range, AnyRef};
 use core::{
     any::TypeId, marker::PhantomData, mem::size_of, ops::RangeBounds, slice::from_raw_parts,
 };
@@ -153,6 +153,34 @@ impl<'a> AnySliceRef<'a> {
             // - The pointer came directly out of a valid slice, so it's not null and aligned
             unsafe { from_raw_parts(self.ptr.cast::<T>(), self.len) }
         })
+    }
+
+    /// Retrieve a reference to one of the elements in the slice
+    ///
+    /// ```
+    /// let data : [i32; 3] = [0, 1, 2];
+    /// let any = sashay::AnySliceRef::erase(data.as_slice());
+    ///
+    /// assert_eq!(any.get(1).unwrap().unerase_into::<i32>(), Some(&1));
+    /// ```
+    pub fn get(&self, index: usize) -> Option<AnyRef> {
+        if index < self.len {
+            // SAFETY:
+            // - The index is within the slice length, so we don't go out of bounds
+            // - We've checked the TypeId of T against the one created at construction, so we're not
+            //   accidentally transmuting to a different type
+            // - The pointer came directly out of a valid slice, and we're jumping from it using a valid stride
+            let reference = unsafe {
+                AnyRef::from_raw_parts(
+                    self.ptr.wrapping_add(index * self.stride).cast::<()>(),
+                    self.type_id,
+                )
+            };
+
+            Some(reference)
+        } else {
+            None
+        }
     }
 
     /// Create a sub-slice of this slice
