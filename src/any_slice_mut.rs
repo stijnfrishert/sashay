@@ -20,7 +20,7 @@ use core::{
 /// let mut any = sashay::AnySliceMut::erase(data.as_mut_slice());
 ///
 /// assert_eq!(any.len(), 3);
-/// assert_eq!(any.stride(), core::mem::size_of::<i32>());
+/// assert_eq!(any.stride(), std::mem::size_of::<i32>());
 ///
 /// // ...and unerased back to their original slice
 /// let slice = any.unerase_mut::<i32>().expect("not a reference to `[i32]`");
@@ -56,6 +56,17 @@ pub struct AnySliceMut<'a> {
 
 impl<'a> AnySliceMut<'a> {
     /// Erase the type of a mutable slice's elements.
+    ///
+    /// The resulting type retains the lifetime and length of the original slice,
+    /// and can even be sub-sliced or indexed like regular slices, but the
+    /// individual elements can only be used after unerasing the type.
+    ///
+    /// ```
+    /// let mut data : [i32; 3] = [0, 1, 2];
+    /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///
+    /// assert_eq!(any.len(), data.len());
+    /// ```
     pub fn erase<T: 'static>(slice: &'a mut [T]) -> AnySliceMut<'a> {
         // Safety:
         //  - The raw parts come from a valid slice
@@ -100,10 +111,21 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Unerase the type back to an immutable slice
+    /// Unerase back to an immutable slice
     ///
-    /// If the the erased slice ref was created with T, you get the original
-    /// slice back. For any other T, this function returns None
+    /// This functions essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
+    /// original slice's element type was `T`, a valid slice reference is returned. Otherwise, you get `None`.
+    ///
+    /// ```
+    /// let mut data : [i32; 3] = [0, 1, 2];
+    /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///
+    /// assert!(any.unerase::<bool>().is_none());
+    /// assert!(any.unerase::<i32>().is_some());
+    /// ```
+    ///
+    /// Note that while this type erased a *mutable* slice, this function unerases it to an *immutable* one.
+    /// If you need a *mutable* slice, use [`AnySliceMut::unerase_mut()`] or [`AnySliceMut::unerase_into()`]
     pub fn unerase<T: 'static>(&self) -> Option<&[T]> {
         self.contains::<T>().then(|| {
             // SAFETY:
@@ -114,10 +136,20 @@ impl<'a> AnySliceMut<'a> {
         })
     }
 
-    /// Unerase the type back to a mutable slice
+    /// Unerase back to a mutable slice
     ///
-    /// If the the erased slice ref was created with T, you get the original
-    /// slice back. For any other T, this function returns None
+    /// This functions essentially the same as [`Any::downcast_mut()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_mut). If the
+    /// original slice's element type was `T`, a valid slice reference is returned. Otherwise, you get `None`.
+    ///
+    /// ```
+    /// let mut data : [i32; 3] = [0, 1, 2];
+    /// let mut any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///
+    /// assert!(any.unerase_mut::<bool>().is_none());
+    /// assert!(any.unerase_mut::<i32>().is_some());
+    /// ```
+    /// Note that this function unerases to a mutable slice. If you only need an immutable one, you
+    /// can use [`AnySliceMut::unerase()`]
     pub fn unerase_mut<T: 'static>(&mut self) -> Option<&mut [T]> {
         self.contains::<T>().then(|| {
             // SAFETY:
@@ -128,10 +160,18 @@ impl<'a> AnySliceMut<'a> {
         })
     }
 
-    /// Unerase the type back into a mutable slice
+    /// Unerase back into a mutable slice
     ///
-    /// If the the erased slice ref was created with T, you get the original
-    /// slice back. For any other T, this function returns None
+    /// This functions essentially the same as [`AnySliceMut::unerase_mut()`],
+    /// except that ownership is tranferred into the slice. If the original slice's element type was `T`,
+    /// a valid slice reference is returned. Otherwise, you get `None`.
+    ///
+    /// ```
+    /// let mut data : [i32; 3] = [0, 1, 2];
+    /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///
+    /// assert!(any.unerase_into::<i32>().is_some());
+    /// ```
     pub fn unerase_into<T: 'static>(self) -> Option<&'a mut [T]> {
         self.contains::<T>().then(|| {
             // SAFETY:

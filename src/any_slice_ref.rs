@@ -16,7 +16,7 @@ use core::{
 /// let any = sashay::AnySliceRef::erase(data.as_slice());
 ///
 /// assert_eq!(any.len(), 3);
-/// assert_eq!(any.stride(), core::mem::size_of::<i32>());
+/// assert_eq!(any.stride(), std::mem::size_of::<i32>());
 ///
 /// // ...and unerased back to their original slice
 /// let slice = any.unerase::<i32>().expect("not a reference to `[i32]`");
@@ -51,6 +51,17 @@ pub struct AnySliceRef<'a> {
 
 impl<'a> AnySliceRef<'a> {
     /// Erase the type of an immutable slice's elements.
+    ///
+    /// The resulting type retains the lifetime and length of the original slice,
+    /// and can even be sub-sliced or indexed like regular slices, but the
+    /// individual elements can only be used after unerasing the type.
+    ///
+    /// ```
+    /// let data : [i32; 3] = [0, 1, 2];
+    /// let any = sashay::AnySliceRef::erase(data.as_slice());
+    ///
+    /// assert_eq!(any.len(), data.len());
+    /// ```
     pub fn erase<T: 'static>(slice: &'a [T]) -> AnySliceRef<'a> {
         // Safety:
         //  - The raw parts come from a valid slice
@@ -100,10 +111,18 @@ impl<'a> AnySliceRef<'a> {
         }
     }
 
-    /// Unerase the type back to an immutable slice
+    /// Unerase back to an immutable slice
     ///
-    /// If the the erased slice ref was created with T, you get the original
-    /// slice back. For any other T, this function returns None
+    /// This functions essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
+    /// original slice's element type was `T`, a valid slice reference is returned. Otherwise, you get `None`.
+    ///
+    /// ```
+    /// let data : [i32; 3] = [0, 1, 2];
+    /// let any = sashay::AnySliceRef::erase(data.as_slice());
+    ///
+    /// assert!(any.unerase::<bool>().is_none());
+    /// assert!(any.unerase::<i32>().is_some());
+    /// ```
     pub fn unerase<T: 'static>(&self) -> Option<&[T]> {
         self.contains::<T>().then(|| {
             // SAFETY:
@@ -114,10 +133,18 @@ impl<'a> AnySliceRef<'a> {
         })
     }
 
-    /// Unerase the type back into an immutable slice
+    /// Unerase back into an immutable slice
     ///
-    /// If the the erased slice ref was created with T, you get the original
-    /// slice back. For any other T, this function returns None
+    /// This functions essentially the same as [`AnySliceRef::unerase()`],
+    /// except that ownership is tranferred into the slice. If the original slice's element type was `T`,
+    /// a valid slice reference is returned. Otherwise, you get `None`.
+    ///
+    /// ```
+    /// let data : [i32; 3] = [0, 1, 2];
+    /// let any = sashay::AnySliceRef::erase(data.as_slice());
+    ///
+    /// assert!(any.unerase_into::<i32>().is_some());
+    /// ```
     pub fn unerase_into<T: 'static>(self) -> Option<&'a [T]> {
         self.contains::<T>().then(|| {
             // SAFETY:

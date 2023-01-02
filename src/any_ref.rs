@@ -27,6 +27,16 @@ pub struct AnyRef<'a> {
 
 impl<'a> AnyRef<'a> {
     /// Erase the type of an immutable reference.
+    ///
+    /// The resulting type retains the lifetime of the original reference, but the
+    /// referred to value can only be used after unerasing the type
+    ///
+    /// ```
+    /// let data : char = '🦀';
+    /// let any = sashay::AnyRef::erase(&data);
+    ///
+    /// assert!(any.contains::<char>());
+    /// ```
     pub fn erase<T: 'static>(reference: &'a T) -> AnyRef<'a> {
         // Safety:
         //  - The raw parts come from a valid reference
@@ -49,10 +59,18 @@ impl<'a> AnyRef<'a> {
         }
     }
 
-    /// Unerase the type back to an immutable reference
+    /// Unerase back to an immutable reference
     ///
-    /// If the the erased reference was created with T, you get the original
-    /// reference back. For any other T, this function returns None
+    /// This functions essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
+    /// original reference's element type was `T`, a valid reference is returned. Otherwise, you get `None`.
+    ///
+    /// ```
+    /// let data : i32 = 7;
+    /// let any = sashay::AnyRef::erase(&data);
+    ///
+    /// assert!(any.unerase::<bool>().is_none());
+    /// assert!(any.unerase::<i32>().is_some());
+    /// ```
     pub fn unerase<T: 'static>(&self) -> Option<&T> {
         self.contains::<T>().then(|| {
             // SAFETY:
@@ -63,10 +81,18 @@ impl<'a> AnyRef<'a> {
         })
     }
 
-    /// Unerase the type back into an immutable reference
+    /// Unerase back into an immutable reference
     ///
-    /// If the the erased slice ref was created with T, you get the original
-    /// slice back. For any other T, this function returns None
+    /// This functions essentially the same as [`AnyRef::unerase()`],
+    /// except that ownership is tranferred into the reference. If the original reference's element type was `T`,
+    /// a valid reference is returned. Otherwise, you get `None`.
+    ///
+    /// ```
+    /// let data : i32 = 7;
+    /// let any = sashay::AnyRef::erase(&data);
+    ///
+    /// assert!(any.unerase_into::<i32>().is_some());
+    /// ```
     pub fn unerase_into<T: 'static>(self) -> Option<&'a T> {
         self.contains::<T>().then(|| {
             // SAFETY:

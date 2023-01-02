@@ -29,6 +29,16 @@ pub struct AnyMut<'a> {
 
 impl<'a> AnyMut<'a> {
     /// Erase the type of a mutable reference.
+    ///
+    /// The resulting type retains the lifetime of the original reference, but the
+    /// referred to value can only be used after unerasing the type
+    ///
+    /// ```
+    /// let mut data : char = '🦀';
+    /// let any = sashay::AnyMut::erase(&mut data);
+    ///
+    /// assert!(any.contains::<char>());
+    /// ```
     pub fn erase<T: 'static>(reference: &'a mut T) -> AnyMut<'a> {
         // Safety:
         //  - The raw parts come from a valid reference
@@ -51,10 +61,21 @@ impl<'a> AnyMut<'a> {
         }
     }
 
-    /// Unerase the type back to an immutable reference
+    /// Unerase back to an immutable reference
     ///
-    /// If the the erased reference was created with T, you get the original
-    /// reference back. For any other T, this function returns None
+    /// This functions essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
+    /// original reference's element type was `T`, a valid reference is returned. Otherwise, you get `None`.
+    ///
+    /// ```
+    /// let data : i32 = 7;
+    /// let any = sashay::AnyRef::erase(&data);
+    ///
+    /// assert!(any.unerase::<bool>().is_none());
+    /// assert!(any.unerase::<i32>().is_some());
+    /// ```
+    ///
+    /// Note that while this type erased a *mutable* reference, this function unerases it to an *immutable* one.
+    /// If you need a *mutable* reference, use [`AnyMut::unerase_mut()`] or [`AnyMut::unerase_into()`]
     pub fn unerase<T: 'static>(&self) -> Option<&T> {
         self.contains::<T>().then(|| {
             // SAFETY:
@@ -65,10 +86,21 @@ impl<'a> AnyMut<'a> {
         })
     }
 
-    /// Unerase the type back to a mutable reference
+    /// Unerase back to a mmutable reference
     ///
-    /// If the the erased reference was created with T, you get the original
-    /// reference back. For any other T, this function returns None
+    /// This functions essentially the same as [`Any::downcast_mut()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_mut). If the
+    /// original reference's element type was `T`, a valid reference is returned. Otherwise, you get `None`.
+    ///
+    /// ```
+    /// let mut data : i32 = 7;
+    /// let mut any = sashay::AnyMut::erase(&mut data);
+    ///
+    /// assert!(any.unerase_mut::<bool>().is_none());
+    /// assert!(any.unerase_mut::<i32>().is_some());
+    /// ```
+    ///
+    /// Note that this function unerases to a mutable reference. If you only need an immutable one, you
+    /// can use [`AnyMut::unerase()`]
     pub fn unerase_mut<T: 'static>(&mut self) -> Option<&mut T> {
         self.contains::<T>().then(|| {
             // SAFETY:
@@ -79,10 +111,18 @@ impl<'a> AnyMut<'a> {
         })
     }
 
-    /// Unerase the type back into a mutable reference
+    /// Unerase back into a mmutable reference
     ///
-    /// If the the erased slice ref was created with T, you get the original
-    /// slice back. For any other T, this function returns None
+    /// This functions essentially the same as [`AnyMut::unerase_mut()`],
+    /// except that ownership is tranferred into the reference. If the original reference's element type was `T`,
+    /// a valid reference is returned. Otherwise, you get `None`.
+    ///
+    /// ```
+    /// let mut data : i32 = 7;
+    /// let any = sashay::AnyMut::erase(&mut data);
+    ///
+    /// assert!(any.unerase_into::<i32>().is_some());
+    /// ```
     pub fn unerase_into<T: 'static>(self) -> Option<&'a mut T> {
         self.contains::<T>().then(|| {
             // SAFETY:
