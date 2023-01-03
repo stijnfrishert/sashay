@@ -182,6 +182,32 @@ impl<'a> AnySliceMut<'a> {
         })
     }
 
+    /// Access this mutable slice as an immutable one
+    ///
+    /// ```
+    /// let mut data : [i32; 3] = [7, 6, 5];
+    /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///
+    /// // as_immutable() can be called multiple times, because immutable references provide shared access
+    /// let im1 = any.as_immutable();
+    /// let im2 = any.as_immutable();
+    /// assert_eq!(im1.len(), 3);
+    /// assert_eq!(im2.len(), 3);
+    /// ```
+    pub fn as_immutable(&self) -> AnySliceRef {
+        // SAFETY:
+        // All parts are valid, we just cast to const
+        // This is ok, because we have an immutable ref to self
+        unsafe {
+            AnySliceRef::from_raw_parts(
+                self.ptr.cast_const().cast::<()>(),
+                self.len,
+                self.stride,
+                self.type_id,
+            )
+        }
+    }
+
     /// Retrieve an immutable reference to one of the elements in the slice
     ///
     /// ```

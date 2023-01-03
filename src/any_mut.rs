@@ -1,3 +1,4 @@
+use crate::AnyRef;
 use core::{any::TypeId, marker::PhantomData};
 
 /// A type-erased mutable reference
@@ -131,6 +132,25 @@ impl<'a> AnyMut<'a> {
             // - The pointer came directly out of a valid reference, so it's not null and aligned
             unsafe { &mut *self.ptr.cast::<T>() }
         })
+    }
+
+    /// Access this mutable reference as an immutable one
+    ///
+    /// ```
+    /// let mut data : i32 = 7;
+    /// let any = sashay::AnyMut::erase(&mut data);
+    ///
+    /// // as_immutable() can be called multiple times, because immutable references provide shared access
+    /// let im1 = any.as_immutable();
+    /// let im2 = any.as_immutable();
+    /// assert_eq!(im1.unerase::<i32>(), Some(&7));
+    /// assert_eq!(im2.unerase::<i32>(), Some(&7));
+    /// ```
+    pub fn as_immutable(&self) -> AnyRef {
+        // SAFETY:
+        // All parts are valid, we just cast to const
+        // This is ok, because we have an immutable ref to self
+        unsafe { AnyRef::from_raw_parts(self.ptr.cast_const(), self.type_id) }
     }
 
     // Retrieve an unsafe immutable pointer to the raw data
