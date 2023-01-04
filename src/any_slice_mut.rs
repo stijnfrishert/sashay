@@ -275,8 +275,8 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Create a sub-slice of this slice.
-    pub fn slice<R>(&self, range: R) -> AnySliceRef
+    /// Access an immutable subslice within a given range.
+    pub fn subslice<R>(&self, range: R) -> AnySliceRef
     where
         R: RangeBounds<usize>,
     {
@@ -299,8 +299,8 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Create a sub-slice of this slice.
-    pub fn slice_mut<R>(&mut self, range: R) -> AnySliceMut
+    /// Access a mutable subslice within a given range.
+    pub fn subslice_mut<R>(&mut self, range: R) -> AnySliceMut
     where
         R: RangeBounds<usize>,
     {
@@ -322,8 +322,10 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Create a sub-slice of this slice.
-    pub fn slice_into<R>(self, range: R) -> AnySliceMut<'a>
+    /// Access a subslice within a given range.
+    ///
+    /// This method transfers ownership into the new slice. If you do not want that, use [`AnySliceRef::subslice()`]
+    pub fn subslice_into<R>(self, range: R) -> AnySliceMut<'a>
     where
         R: RangeBounds<usize>,
     {
@@ -429,7 +431,7 @@ mod tests {
         let mut any = AnySliceMut::erase(data.as_mut_slice());
 
         // sub_mut()
-        let unerased_sub = any.slice_mut(3..).unerase_into::<(u8, u16)>().unwrap();
+        let unerased_sub = any.subslice_mut(3..).unerase_into::<(u8, u16)>().unwrap();
         unerased_sub.fill((10u8, 10u16));
 
         assert_eq!(

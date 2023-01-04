@@ -20,3 +20,15 @@ where
 
     start..end
 }
+
+#[test]
+fn range_types() {
+    assert_eq!(constrain_range(5, 0..2), 0..2); // Range
+    assert_eq!(constrain_range(5, 3..7), 3..5);
+    assert_eq!(constrain_range(5, ..3), 0..3);
+    assert_eq!(constrain_range(5, 7..), 5..5); // RangeFrom
+    assert_eq!(constrain_range(5, ..), 0..5); // RangeFull
+    assert_eq!(constrain_range(5, 1..=2), 1..3); // RangeInclusive
+    assert_eq!(constrain_range(5, ..4), 0..4); // RangeTo
+    assert_eq!(constrain_range(5, ..=2), 0..3); // RangeToInclusive
+}

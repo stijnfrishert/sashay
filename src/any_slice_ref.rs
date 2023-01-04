@@ -184,8 +184,8 @@ impl<'a> AnySliceRef<'a> {
         }
     }
 
-    /// Create a sub-slice of this slice.
-    pub fn slice<R>(&self, range: R) -> AnySliceRef
+    /// Access a subslice within a given range.
+    pub fn subslice<R>(&self, range: R) -> AnySliceRef
     where
         R: RangeBounds<usize>,
     {
@@ -207,8 +207,10 @@ impl<'a> AnySliceRef<'a> {
         }
     }
 
-    /// Create a sub-slice of this slice.
-    pub fn slice_into<R>(self, range: R) -> AnySliceRef<'a>
+    /// Access a subslice within a given range.
+    ///
+    /// This method transfers ownership into the new slice. If you do not want that, use [`AnySliceRef::subslice()`]
+    pub fn subslice_into<R>(self, range: R) -> AnySliceRef<'a>
     where
         R: RangeBounds<usize>,
     {
@@ -306,19 +308,11 @@ mod tests {
 
         let any = AnySliceRef::erase(data.as_slice());
 
-        // sub()
-        assert_eq!(any.slice(0..2).unerase::<(u8, u16)>(), Some(&data[0..2])); // Range
-        assert_eq!(any.slice(3..7).unerase::<(u8, u16)>(), Some(&data[3..5]));
-        assert_eq!(any.slice(..3).unerase::<(u8, u16)>(), Some(&data[..3]));
-        assert_eq!(any.slice(7..).unerase::<(u8, u16)>(), Some(&data[5..])); // RangeFrom
-        assert_eq!(any.slice(..).unerase::<(u8, u16)>(), Some(&data[..])); // RangeFull
-        assert_eq!(any.slice(1..=2).unerase::<(u8, u16)>(), Some(&data[1..=2])); // RangeInclusive
-        assert_eq!(any.slice(..4).unerase::<(u8, u16)>(), Some(&data[..4])); // RangeTo
-        assert_eq!(any.slice(..=2).unerase::<(u8, u16)>(), Some(&data[..=2])); // RangeToInclusive
+        assert_eq!(any.subslice(0..2).unerase::<(u8, u16)>(), Some(&data[0..2]));
+        assert_eq!(any.subslice(3..).unerase::<(u8, u16)>(), Some(&data[3..]));
 
-        // sub_into()
         assert_eq!(
-            any.slice_into(0..2).unerase::<(u8, u16)>(),
+            any.subslice_into(0..2).unerase::<(u8, u16)>(),
             Some(&data[0..2])
         );
     }
