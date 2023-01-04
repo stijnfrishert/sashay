@@ -5,7 +5,7 @@ use core::{
 
 /// A type-erased immutable slice.
 ///
-/// A dynamically sized view into contiguous memory, just like regular Rust primitive
+/// A dynamically sized immutable view into contiguous memory, just like regular Rust primitive
 /// [slices](https://doc.rust-lang.org/std/primitive.slice.html), except that the type of the
 /// individual elements is erased. This allows you to deal with and *store* slices of different
 /// element types within the same collection.
@@ -78,9 +78,9 @@ impl<'a> AnySliceRef<'a> {
 
     /// Construct an erased slice from its raw parts.
     ///
-    /// If you already have a `&[T]`, it is recommended to call [`erase()`](AnySliceRef::erase()).
+    /// If you already have a `&[T]`, it is recommended to call [`AnySliceRef::erase()`].
     ///
-    /// This function follows the same API as [`from_raw_parts()`](https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html)
+    /// This function follows the same API as [`slice::from_raw_parts()`](https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html)
     /// with some additions. The parameters `ptr` and `len` represent the slice memory, though be
     /// aware that `len` is the number of *elements* in the slice, not the byte count. To represent a
     /// pointer of any type, `*const ()` is used. If you have a `*const T`, you can cast it using
@@ -111,9 +111,9 @@ impl<'a> AnySliceRef<'a> {
         }
     }
 
-    /// Unerase back to an immutable slice
+    /// Unerase back to an immutable slice.
     ///
-    /// This functions essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
+    /// This behaves essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
     /// original slice's element type was `T`, a valid slice reference is returned. Otherwise, you get `None`.
     ///
     /// ```
@@ -133,9 +133,9 @@ impl<'a> AnySliceRef<'a> {
         })
     }
 
-    /// Unerase back into an immutable slice
+    /// Unerase back into an immutable slice.
     ///
-    /// This functions essentially the same as [`AnySliceRef::unerase()`],
+    /// This behaves essentially the same as [`AnySliceRef::unerase()`],
     /// except that ownership is tranferred into the slice. If the original slice's element type was `T`,
     /// a valid slice reference is returned. Otherwise, you get `None`.
     ///
@@ -144,6 +144,7 @@ impl<'a> AnySliceRef<'a> {
     /// let any = sashay::AnySliceRef::erase(data.as_slice());
     ///
     /// assert!(any.unerase_into::<i32>().is_some());
+    /// // Can't unerase anymore after this, ownerhip has been moved out of the any
     /// ```
     pub fn unerase_into<T: 'static>(self) -> Option<&'a [T]> {
         self.contains::<T>().then(|| {
@@ -155,7 +156,7 @@ impl<'a> AnySliceRef<'a> {
         })
     }
 
-    /// Retrieve a reference to one of the elements in the slice
+    /// Retrieve an immutable reference to one of the elements in the slice.
     ///
     /// ```
     /// let data : [i32; 3] = [0, 1, 2];
@@ -183,7 +184,7 @@ impl<'a> AnySliceRef<'a> {
         }
     }
 
-    /// Create a sub-slice of this slice
+    /// Create a sub-slice of this slice.
     pub fn slice<R>(&self, range: R) -> AnySliceRef
     where
         R: RangeBounds<usize>,
@@ -206,7 +207,7 @@ impl<'a> AnySliceRef<'a> {
         }
     }
 
-    /// Create a sub-slice of this slice
+    /// Create a sub-slice of this slice.
     pub fn slice_into<R>(self, range: R) -> AnySliceRef<'a>
     where
         R: RangeBounds<usize>,

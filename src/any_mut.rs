@@ -1,7 +1,12 @@
 use crate::AnyRef;
 use core::{any::TypeId, marker::PhantomData};
 
-/// A type-erased mutable reference
+/// A type-erased mutable reference.
+///
+/// A mutable borrow of some owned memory, just like regular Rust primitive
+/// [references](https://doc.rust-lang.org/std/primitive.reference.html), except that the type of the
+/// referee is erased. This allows you to deal with and *store* references of different
+/// types within the same collection.
 ///
 /// # Example
 ///
@@ -47,13 +52,18 @@ impl<'a> AnyMut<'a> {
         unsafe { Self::from_raw_parts((reference as *mut T).cast::<()>(), TypeId::of::<T>()) }
     }
 
-    /// Construct an erased reference from its raw parts
+    /// Construct an erased reference from its raw parts.
+    ///
+    /// If you already have a `&mut T`, it is recommended to call [`AnyMut::erase()`].
+    ///
+    /// This function behaves the same as calling `as *mut T` on a reference, with the addition that
+    /// it takes a unique `type_id` representing the type `T`.
     ///
     /// # Safety
     ///
     /// Calling this is only defined behaviour if:
     ///  - The pointer refers to a valid `T`
-    ///  - `type_id` is the correct `TypeId` for the element `T`
+    ///  - `type_id` is the correct `TypeId` for `T`
     pub unsafe fn from_raw_parts(ptr: *mut (), type_id: TypeId) -> Self {
         Self {
             ptr,
@@ -62,10 +72,13 @@ impl<'a> AnyMut<'a> {
         }
     }
 
-    /// Unerase back to an immutable reference
+    /// Unerase back to an _immutable_ reference.
     ///
-    /// This functions essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
-    /// original reference's element type was `T`, a valid reference is returned. Otherwise, you get `None`.
+    /// This behaves essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
+    /// original reference's type was `T`, a valid reference is returned. Otherwise, you get `None`.
+    ///
+    /// Note that while `AnyMut` represents a *mutable* reference, this function unerases it to an *immutable* one.
+    /// If you need a mutable reference, use [`AnyMut::unerase_mut()`] or [`AnyMut::unerase_into()`]
     ///
     /// ```
     /// let data : i32 = 7;
@@ -74,9 +87,6 @@ impl<'a> AnyMut<'a> {
     /// assert!(any.unerase::<bool>().is_none());
     /// assert!(any.unerase::<i32>().is_some());
     /// ```
-    ///
-    /// Note that while this type erased a *mutable* reference, this function unerases it to an *immutable* one.
-    /// If you need a *mutable* reference, use [`AnyMut::unerase_mut()`] or [`AnyMut::unerase_into()`]
     pub fn unerase<T: 'static>(&self) -> Option<&T> {
         self.contains::<T>().then(|| {
             // SAFETY:
@@ -87,10 +97,13 @@ impl<'a> AnyMut<'a> {
         })
     }
 
-    /// Unerase back to a mmutable reference
+    /// Unerase back to a mutable reference.
     ///
-    /// This functions essentially the same as [`Any::downcast_mut()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_mut). If the
-    /// original reference's element type was `T`, a valid reference is returned. Otherwise, you get `None`.
+    /// This behaves essentially the same as [`Any::downcast_mut()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_mut). If the
+    /// original reference's type was `T`, a valid reference is returned. Otherwise, you get `None`.
+    ///
+    /// Note that this function unerases to a _mutable_ reference. If you only need an immutable one, you
+    /// can use [`AnyMut::unerase()`]
     ///
     /// ```
     /// let mut data : i32 = 7;
@@ -99,9 +112,6 @@ impl<'a> AnyMut<'a> {
     /// assert!(any.unerase_mut::<bool>().is_none());
     /// assert!(any.unerase_mut::<i32>().is_some());
     /// ```
-    ///
-    /// Note that this function unerases to a mutable reference. If you only need an immutable one, you
-    /// can use [`AnyMut::unerase()`]
     pub fn unerase_mut<T: 'static>(&mut self) -> Option<&mut T> {
         self.contains::<T>().then(|| {
             // SAFETY:
@@ -112,10 +122,10 @@ impl<'a> AnyMut<'a> {
         })
     }
 
-    /// Unerase back into a mmutable reference
+    /// Unerase back into a mutable reference.
     ///
-    /// This functions essentially the same as [`AnyMut::unerase_mut()`],
-    /// except that ownership is tranferred into the reference. If the original reference's element type was `T`,
+    /// This behaves essentially the same as [`AnyMut::unerase_mut()`],
+    /// except that ownership is tranferred into the reference. If the original reference's type was `T`,
     /// a valid reference is returned. Otherwise, you get `None`.
     ///
     /// ```
@@ -123,6 +133,7 @@ impl<'a> AnyMut<'a> {
     /// let any = sashay::AnyMut::erase(&mut data);
     ///
     /// assert!(any.unerase_into::<i32>().is_some());
+    /// // Can't unerase anymore after this, ownerhip has been moved out of the any
     /// ```
     pub fn unerase_into<T: 'static>(self) -> Option<&'a mut T> {
         self.contains::<T>().then(|| {
@@ -134,15 +145,18 @@ impl<'a> AnyMut<'a> {
         })
     }
 
-    /// Access this mutable reference as an immutable one
+    /// Access this mutable reference as an immutable one.
+    ///
+    /// Even though you have mutable and unique access to a reference, this fuction lets you
+    /// trade in the mutability for shared access.
     ///
     /// ```
     /// let mut data : i32 = 7;
     /// let any = sashay::AnyMut::erase(&mut data);
     ///
     /// // as_immutable() can be called multiple times, because immutable references provide shared access
-    /// let im1 = any.as_immutable();
-    /// let im2 = any.as_immutable();
+    /// let im1 : sashay::AnyRef = any.as_immutable();
+    /// let im2 : sashay::AnyRef = any.as_immutable();
     /// assert_eq!(im1.unerase::<i32>(), Some(&7));
     /// assert_eq!(im2.unerase::<i32>(), Some(&7));
     /// ```

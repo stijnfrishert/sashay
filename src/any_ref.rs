@@ -1,6 +1,11 @@
 use core::{any::TypeId, marker::PhantomData};
 
-/// A type-erased immutable reference
+/// A type-erased immutable reference.
+///
+/// An immutable borrow of some owned memory, just like regular Rust primitive
+/// [references](https://doc.rust-lang.org/std/primitive.reference.html), except that the type of the
+/// referee is erased. This allows you to deal with and *store* references of different
+/// types within the same collection.
 ///
 /// # Example
 ///
@@ -44,13 +49,18 @@ impl<'a> AnyRef<'a> {
         unsafe { Self::from_raw_parts((reference as *const T).cast::<()>(), TypeId::of::<T>()) }
     }
 
-    /// Construct an erased reference from its raw parts
+    /// Construct an erased reference from its raw parts.
+    ///
+    /// If you already have a `&T`, it is recommended to call [`AnyRef::erase()`].
+    ///
+    /// This function behaves the same as calling `as *const T` on a reference, with the addition that
+    /// it takes a unique `type_id` representing the type `T`.
     ///
     /// # Safety
     ///
     /// Calling this is only defined behaviour if:
     ///  - The pointer refers to a valid `T`
-    ///  - `type_id` is the correct `TypeId` for the element `T`
+    ///  - `type_id` is the correct `TypeId` for `T`
     pub unsafe fn from_raw_parts(ptr: *const (), type_id: TypeId) -> Self {
         Self {
             ptr,
@@ -59,10 +69,10 @@ impl<'a> AnyRef<'a> {
         }
     }
 
-    /// Unerase back to an immutable reference
+    /// Unerase back to an immutable reference.
     ///
-    /// This functions essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
-    /// original reference's element type was `T`, a valid reference is returned. Otherwise, you get `None`.
+    /// This behaves essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
+    /// original reference's type was `T`, a valid reference is returned. Otherwise, you get `None`.
     ///
     /// ```
     /// let data : i32 = 7;
@@ -81,9 +91,9 @@ impl<'a> AnyRef<'a> {
         })
     }
 
-    /// Unerase back into an immutable reference
+    /// Unerase back into an immutable reference.
     ///
-    /// This functions essentially the same as [`AnyRef::unerase()`],
+    /// This behaves essentially the same as [`AnyRef::unerase()`],
     /// except that ownership is tranferred into the reference. If the original reference's element type was `T`,
     /// a valid reference is returned. Otherwise, you get `None`.
     ///
@@ -92,6 +102,7 @@ impl<'a> AnyRef<'a> {
     /// let any = sashay::AnyRef::erase(&data);
     ///
     /// assert!(any.unerase_into::<i32>().is_some());
+    /// // Can't unerase anymore after this, ownerhip has been moved out of the any
     /// ```
     pub fn unerase_into<T: 'static>(self) -> Option<&'a T> {
         self.contains::<T>().then(|| {

@@ -7,7 +7,7 @@ use core::{
     slice::{from_raw_parts, from_raw_parts_mut},
 };
 
-/// A type-erased mutable slice
+/// A type-erased mutable slice.
 ///
 /// A dynamically sized mutable view into contiguous memory, just like regular Rust primitive
 /// [slices](https://doc.rust-lang.org/std/primitive.slice.html), except that the type of the
@@ -83,9 +83,9 @@ impl<'a> AnySliceMut<'a> {
 
     /// Construct an erased slice from its raw parts.
     ///
-    /// If you already have a `&mut [T]`, it is recommended to call [`erase()`](AnySliceRef::erase()).
+    /// If you already have a `&mut [T]`, it is recommended to call [`AnySliceMut::erase()`].
     ///
-    /// This function follows the same API as [`from_raw_parts_mut()`](https://doc.rust-lang.org/std/slice/fn.from_raw_parts_mut.html)
+    /// This function follows the same API as [`slice::from_raw_parts_mut()`](https://doc.rust-lang.org/std/slice/fn.from_raw_parts_mut.html)
     /// with some additions. The parameters `ptr` and `len` represent the slice memory, though be
     /// aware that `len` is the number of *elements* in the slice, not the byte count. To represent a
     /// pointer of any type, `*mut ()` is used. If you have a `*mut T`, you can cast it using
@@ -111,10 +111,13 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Unerase back to an immutable slice
+    /// Unerase back to an immutable slice.
     ///
-    /// This functions essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
+    /// This behaves essentially the same as [`Any::downcast_ref()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_ref). If the
     /// original slice's element type was `T`, a valid slice reference is returned. Otherwise, you get `None`.
+    ///
+    /// Note that while `AnySliceMut` represents a *mutable* slice, this function unerases it to an *immutable* one.
+    /// If you need a mutable slice, use [`AnySliceMut::unerase_mut()`] or [`AnySliceMut::unerase_into()`]
     ///
     /// ```
     /// let mut data : [i32; 3] = [0, 1, 2];
@@ -123,9 +126,6 @@ impl<'a> AnySliceMut<'a> {
     /// assert!(any.unerase::<bool>().is_none());
     /// assert!(any.unerase::<i32>().is_some());
     /// ```
-    ///
-    /// Note that while this type erased a *mutable* slice, this function unerases it to an *immutable* one.
-    /// If you need a *mutable* slice, use [`AnySliceMut::unerase_mut()`] or [`AnySliceMut::unerase_into()`]
     pub fn unerase<T: 'static>(&self) -> Option<&[T]> {
         self.contains::<T>().then(|| {
             // SAFETY:
@@ -136,10 +136,13 @@ impl<'a> AnySliceMut<'a> {
         })
     }
 
-    /// Unerase back to a mutable slice
+    /// Unerase back to a mutable slice.
     ///
-    /// This functions essentially the same as [`Any::downcast_mut()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_mut). If the
+    /// This behaves essentially the same as [`Any::downcast_mut()`](https://doc.rust-lang.org/core/any/trait.Any.html#method.downcast_mut). If the
     /// original slice's element type was `T`, a valid slice reference is returned. Otherwise, you get `None`.
+    ///
+    /// Note that this function unerases to a _mutable_ slice. If you only need an immutable one, you
+    /// can use [`AnySliceMut::unerase()`]
     ///
     /// ```
     /// let mut data : [i32; 3] = [0, 1, 2];
@@ -148,8 +151,6 @@ impl<'a> AnySliceMut<'a> {
     /// assert!(any.unerase_mut::<bool>().is_none());
     /// assert!(any.unerase_mut::<i32>().is_some());
     /// ```
-    /// Note that this function unerases to a mutable slice. If you only need an immutable one, you
-    /// can use [`AnySliceMut::unerase()`]
     pub fn unerase_mut<T: 'static>(&mut self) -> Option<&mut [T]> {
         self.contains::<T>().then(|| {
             // SAFETY:
@@ -160,9 +161,9 @@ impl<'a> AnySliceMut<'a> {
         })
     }
 
-    /// Unerase back into a mutable slice
+    /// Unerase back into a mutable slice.
     ///
-    /// This functions essentially the same as [`AnySliceMut::unerase_mut()`],
+    /// This behaves essentially the same as [`AnySliceMut::unerase_mut()`],
     /// except that ownership is tranferred into the slice. If the original slice's element type was `T`,
     /// a valid slice reference is returned. Otherwise, you get `None`.
     ///
@@ -171,6 +172,7 @@ impl<'a> AnySliceMut<'a> {
     /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
     ///
     /// assert!(any.unerase_into::<i32>().is_some());
+    /// // Can't unerase anymore after this, ownerhip has been moved out of the any
     /// ```
     pub fn unerase_into<T: 'static>(self) -> Option<&'a mut [T]> {
         self.contains::<T>().then(|| {
@@ -182,15 +184,18 @@ impl<'a> AnySliceMut<'a> {
         })
     }
 
-    /// Access this mutable slice as an immutable one
+    /// Access this mutable slice as an immutable one.
+    ///
+    /// Even though you have mutable and unique access to a slice, this fuction lets you
+    /// trade in the mutability for shared access.
     ///
     /// ```
     /// let mut data : [i32; 3] = [7, 6, 5];
     /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
     ///
     /// // as_immutable() can be called multiple times, because immutable references provide shared access
-    /// let im1 = any.as_immutable();
-    /// let im2 = any.as_immutable();
+    /// let im1 : sashay::AnySliceRef = any.as_immutable();
+    /// let im2 : sashay::AnySliceRef = any.as_immutable();
     /// assert_eq!(im1.len(), 3);
     /// assert_eq!(im2.len(), 3);
     /// ```
@@ -208,7 +213,7 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Retrieve an immutable reference to one of the elements in the slice
+    /// Retrieve an immutable reference to one of the elements in the slice.
     ///
     /// ```
     /// let mut data : [i32; 3] = [0, 1, 2];
@@ -239,7 +244,7 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Retrieve a mutable reference to one of the elements in the slice
+    /// Retrieve a mutable reference to one of the elements in the slice.
     ///
     /// ```
     /// let mut data : [i32; 3] = [0, 1, 2];
@@ -270,7 +275,7 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Create a sub-slice of this slice
+    /// Create a sub-slice of this slice.
     pub fn slice<R>(&self, range: R) -> AnySliceRef
     where
         R: RangeBounds<usize>,
@@ -294,7 +299,7 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Create a sub-slice of this slice
+    /// Create a sub-slice of this slice.
     pub fn slice_mut<R>(&mut self, range: R) -> AnySliceMut
     where
         R: RangeBounds<usize>,
@@ -317,7 +322,7 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Create a sub-slice of this slice
+    /// Create a sub-slice of this slice.
     pub fn slice_into<R>(self, range: R) -> AnySliceMut<'a>
     where
         R: RangeBounds<usize>,
