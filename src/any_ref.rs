@@ -134,17 +134,17 @@ impl<'a> AnyRef<'a> {
         })
     }
 
-    // Retrieve an unsafe immutable pointer to the raw data
+    /// Retrieve an unsafe immutable pointer to the raw data.
     pub const fn as_ptr(&self) -> *const () {
         self.ptr
     }
 
-    /// Does the slice contain elements of type `T`?
+    /// Was the original referee of type `T`?
     pub fn contains<T: 'static>(&self) -> bool {
         TypeId::of::<T>() == self.type_id
     }
 
-    /// A unique type id representing the original reference type `T`
+    /// A unique type id representing the original reference type `T`.
     pub const fn type_id(&self) -> &TypeId {
         &self.type_id
     }

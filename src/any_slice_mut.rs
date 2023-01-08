@@ -431,12 +431,12 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    // Retrieve an unsafe immutable pointer to the raw slice data
+    /// Retrieve an unsafe immutable pointer to the raw slice data.
     pub const fn as_ptr(&self) -> *const () {
         self.ptr.cast::<()>().cast_const()
     }
 
-    // Retrieve an unsafe mutable pointer to the raw slice data
+    /// Retrieve an unsafe mutable pointer to the raw slice data.
     pub fn as_mut_ptr(&mut self) -> *mut () {
         self.ptr.cast::<()>()
     }
@@ -451,17 +451,17 @@ impl<'a> AnySliceMut<'a> {
         self.len == 0
     }
 
-    /// Does the slice contain elements of type `T`?
+    /// Was the original slice element of type `T`?
     pub fn contains<T: 'static>(&self) -> bool {
         TypeId::of::<T>() == self.type_id
     }
 
-    /// The `size_of()` of the original slice elements of type `T`
+    /// The `size_of()` of the original slice elements of type `T`.
     pub const fn stride(&self) -> usize {
         self.stride
     }
 
-    /// A unique type id representing the original slice element `T`
+    /// A unique type id representing the original slice element `T`.
     pub const fn type_id(&self) -> &TypeId {
         &self.type_id
     }
