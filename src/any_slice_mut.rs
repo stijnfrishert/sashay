@@ -123,8 +123,16 @@ impl<'a> AnySliceMut<'a> {
     /// let mut data : [i32; 3] = [0, 1, 2];
     /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
     ///
+    /// // You can unerase multiple times, because this is a shared, immutable reference
+    /// let unerased_a = any.unerase::<i32>().unwrap();
+    /// let unerased_b = any.unerase::<i32>().unwrap();
+    /// assert_eq!(unerased_a, unerased_b);
+    ///
+    /// // Doesn't compile, because you can't mutate
+    /// // unerased_a.fill(0);
+    ///
+    /// // Unerasing to a different type gives you nothing
     /// assert!(any.unerase::<bool>().is_none());
-    /// assert!(any.unerase::<i32>().is_some());
     /// ```
     pub fn unerase<T: 'static>(&self) -> Option<&[T]> {
         self.contains::<T>().then(|| {
@@ -148,8 +156,13 @@ impl<'a> AnySliceMut<'a> {
     /// let mut data : [i32; 3] = [0, 1, 2];
     /// let mut any = sashay::AnySliceMut::erase(data.as_mut_slice());
     ///
-    /// assert!(any.unerase_mut::<bool>().is_none());
-    /// assert!(any.unerase_mut::<i32>().is_some());
+    /// // You can unerase back to a mutable slice
+    /// let unerased = any.unerase_mut::<i32>().unwrap();
+    /// unerased.fill(0);
+    /// assert_eq!(data, [0, 0, 0]);
+    ///
+    /// // You can't unerase_mut twice, because this is a _unique_, mutable reference
+    /// // any.unerase_mut::<i32>();
     /// ```
     pub fn unerase_mut<T: 'static>(&mut self) -> Option<&mut [T]> {
         self.contains::<T>().then(|| {
@@ -169,10 +182,22 @@ impl<'a> AnySliceMut<'a> {
     ///
     /// ```
     /// let mut data : [i32; 3] = [0, 1, 2];
-    /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
     ///
-    /// assert!(any.unerase_into::<i32>().is_some());
-    /// // Can't unerase anymore after this, ownerhip has been moved out of the any
+    /// let unerased = {
+    ///     // Unerase, transferring ownership into the resulting slice
+    ///     let any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///     let unerased = any.unerase_into::<i32>().unwrap();
+    ///
+    ///     // Can't unerase anymore after this, ownerhip has been moved out of the any
+    ///     // any.unerase_into::<i32>();
+    ///
+    ///     // Because unerase_into() transfers ownership, the resulting slice's lifetime
+    ///     // can escape the any's lifetime scope and just reference the original data
+    ///     unerased
+    /// };
+    ///
+    /// unerased.fill(0);
+    /// assert_eq!(data, [0, 0, 0]);
     /// ```
     pub fn unerase_into<T: 'static>(self) -> Option<&'a mut [T]> {
         self.contains::<T>().then(|| {
@@ -194,10 +219,11 @@ impl<'a> AnySliceMut<'a> {
     /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
     ///
     /// // as_immutable() can be called multiple times, because immutable references provide shared access
-    /// let im1 : sashay::AnySliceRef = any.as_immutable();
-    /// let im2 : sashay::AnySliceRef = any.as_immutable();
-    /// assert_eq!(im1.len(), 3);
-    /// assert_eq!(im2.len(), 3);
+    /// let immutable_a = any.as_immutable();
+    /// let immutable_b = any.as_immutable();
+    ///
+    /// assert_eq!(immutable_a.len(), 3);
+    /// assert_eq!(immutable_b.len(), 3);
     /// ```
     pub fn as_immutable(&self) -> AnySliceRef {
         // SAFETY:
