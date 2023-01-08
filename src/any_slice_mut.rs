@@ -302,6 +302,24 @@ impl<'a> AnySliceMut<'a> {
     }
 
     /// Access an immutable subslice within a given range.
+    ///
+    /// Just like calling slice[0..10] on a regular primitive slice, you can also take a subslice
+    /// of type-erased slices. Because of a limitation in the [`Index`](core::ops::Index) trait we can't use
+    /// the same syntax, but `subslice()` behaves the same.
+    ///
+    /// Note that this function subslices _immutably_. If you need a mutable subslice, you
+    /// can use [`AnySliceMut::subslice_mut()`]
+    ///
+    /// ```
+    /// let mut data : [i32; 5] = [0, 1, 2, 3, 4];
+    /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///
+    /// // Take a subslice
+    /// let sub = any.subslice(1..4);
+    ///
+    /// assert_eq!(sub.len(), 3);
+    /// assert_eq!(sub.unerase::<i32>().unwrap(), [1, 2, 3].as_slice());
+    /// ```
     pub fn subslice<R>(&self, range: R) -> AnySliceRef
     where
         R: RangeBounds<usize>,
@@ -326,6 +344,27 @@ impl<'a> AnySliceMut<'a> {
     }
 
     /// Access a mutable subslice within a given range.
+    ///
+    /// Just like calling slice[0..10] on a regular primitive slice, you can also take a subslice
+    /// of type-erased slices. Because of a limitation in the [`IndexMut`](core::ops::IndexMut) trait we can't use
+    /// the same syntax, but `subslice_mut()` behaves the same.
+    ///
+    /// Note that this function subslices _mutably_. If you only need an immutable subslice, you
+    /// can use [`AnySliceMut::subslice()`]
+    ///
+    /// ```
+    /// let mut data : [i32; 5] = [0, 1, 2, 3, 4];
+    /// let mut any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///
+    /// // Take a subslice
+    /// let mut sub = any.subslice_mut(1..4);
+    /// assert_eq!(sub.len(), 3);
+    ///
+    /// // Mutate it
+    /// sub.unerase_mut::<i32>().unwrap().fill(8);
+    ///
+    /// assert_eq!(data, [0, 8, 8, 8, 4]);
+    /// ```
     pub fn subslice_mut<R>(&mut self, range: R) -> AnySliceMut
     where
         R: RangeBounds<usize>,
@@ -350,7 +389,26 @@ impl<'a> AnySliceMut<'a> {
 
     /// Access a subslice within a given range.
     ///
-    /// This method transfers ownership into the new slice. If you do not want that, use [`AnySliceRef::subslice()`]
+    /// Just like calling slice[0..10] on a regular primitive slice, you can also take a subslice
+    /// of type-erased slices. Note that this function transfers ownership into the newly type-erased slice.
+    /// If you do not want that, use [`AnySliceMut::subslice()`] or [`AnySliceMut::subslice_mut()`].
+    ///
+    /// ```
+    /// let mut data : [i32; 5] = [0, 1, 2, 3, 4];
+    ///
+    /// let sub = {
+    ///     // Take a subslice
+    ///     let any = sashay::AnySliceMut::erase(data.as_mut_slice());
+    ///     let sub = any.subslice_into(1..4);
+    ///
+    ///     // Because subslice_into() transfers ownership, the resulting subslice's lifetime
+    ///     // can escape the original slice's lifetime scope and just reference the original data
+    ///     sub
+    /// };
+    ///
+    /// assert_eq!(sub.len(), 3);
+    /// assert_eq!(sub.unerase::<i32>().unwrap(), [1, 2, 3].as_slice());
+    /// ```
     pub fn subslice_into<R>(self, range: R) -> AnySliceMut<'a>
     where
         R: RangeBounds<usize>,

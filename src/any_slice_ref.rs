@@ -204,6 +204,21 @@ impl<'a> AnySliceRef<'a> {
     }
 
     /// Access a subslice within a given range.
+    ///
+    /// Just like calling slice[0..10] on a regular primitive slice, you can also take a subslice
+    /// of type-erased slices. Because of a limitation in the [`Index`](core::ops::Index) trait we can't use
+    /// the same syntax, but `subslice()` behaves the same.
+    ///
+    /// ```
+    /// let data : [i32; 5] = [0, 1, 2, 3, 4];
+    /// let any = sashay::AnySliceRef::erase(data.as_slice());
+    ///
+    /// // Take a subslice
+    /// let sub = any.subslice(1..4);
+    ///
+    /// assert_eq!(sub.len(), 3);
+    /// assert_eq!(sub.unerase::<i32>().unwrap(), [1, 2, 3].as_slice());
+    /// ```
     pub fn subslice<R>(&self, range: R) -> AnySliceRef
     where
         R: RangeBounds<usize>,
@@ -228,7 +243,26 @@ impl<'a> AnySliceRef<'a> {
 
     /// Access a subslice within a given range.
     ///
-    /// This method transfers ownership into the new slice. If you do not want that, use [`AnySliceRef::subslice()`]
+    /// Just like calling slice[0..10] on a regular primitive slice, you can also take a subslice
+    /// of type-erased slices. Note that this function transfers ownership into the newly type-erased slice.
+    /// If you do not want that, use [`AnySliceRef::subslice()`]
+    ///
+    /// ```
+    /// let data : [i32; 5] = [0, 1, 2, 3, 4];
+    ///
+    /// let sub = {
+    ///     // Take a subslice
+    ///     let any = sashay::AnySliceRef::erase(data.as_slice());
+    ///     let sub = any.subslice_into(1..4);
+    ///
+    ///     // Because subslice_into() transfers ownership, the resulting subslice's lifetime
+    ///     // can escape the original slice's lifetime scope and just reference the original data
+    ///     sub
+    /// };
+    ///
+    /// assert_eq!(sub.len(), 3);
+    /// assert_eq!(sub.unerase::<i32>().unwrap(), [1, 2, 3].as_slice());
+    /// ```
     pub fn subslice_into<R>(self, range: R) -> AnySliceRef<'a>
     where
         R: RangeBounds<usize>,
