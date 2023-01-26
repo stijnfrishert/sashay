@@ -193,6 +193,27 @@ impl<'a> AnyMut<'a> {
         unsafe { AnyRef::from_raw_parts(self.ptr.cast_const(), self.type_id) }
     }
 
+    /// Borrow this mutable reference as a mutable reference with lifetime 'self
+    ///
+    /// This operation might seem redundant, but just like regular references coming out
+    /// of methods have the lifetime or `self`, you can use `borrow_mut()` to do the same.
+    /// The resulting `AnyMut` has its lifetime tied to `self`.
+    ///
+    /// ```
+    /// struct Container<'a> {
+    ///     any: sashay::AnyMut<'a>,
+    /// }
+    ///
+    /// impl<'a> Container<'a> {
+    ///     fn get_ref<'b>(&'b mut self) -> sashay::AnyMut<'b> {
+    ///         self.any.borrow_mut()
+    ///     }
+    /// }
+    /// ```
+    pub fn borrow_mut(&mut self) -> AnyMut {
+        unsafe { AnyMut::from_raw_parts(self.ptr, self.type_id) }
+    }
+
     /// Retrieve an unsafe immutable pointer to the raw data.
     pub const fn as_ptr(&self) -> *const () {
         self.ptr.cast_const()

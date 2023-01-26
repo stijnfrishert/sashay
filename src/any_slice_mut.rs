@@ -239,6 +239,29 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
+    /// Borrow this mutable slice as a mutable slice with lifetime 'self
+    ///
+    /// This operation might seem redundant, but just like regular slices coming out
+    /// of methods have the lifetime or `self`, you can use `borrow_mut()` to do the same.
+    /// The resulting `AnySliceMut` has its lifetime tied to `self`.
+    ///
+    /// ```
+    /// struct Container<'a> {
+    ///     any: sashay::AnySliceMut<'a>,
+    /// }
+    ///
+    /// impl<'a> Container<'a> {
+    ///     fn get_ref<'b>(&'b mut self) -> sashay::AnySliceMut<'b> {
+    ///         self.any.borrow_mut()
+    ///     }
+    /// }
+    /// ```
+    pub fn borrow_mut(&mut self) -> AnySliceMut {
+        unsafe {
+            AnySliceMut::from_raw_parts(self.ptr.cast::<()>(), self.len, self.stride, self.type_id)
+        }
+    }
+
     /// Retrieve an immutable reference to one of the elements in the slice.
     ///
     /// ```
