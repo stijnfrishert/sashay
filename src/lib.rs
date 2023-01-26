@@ -31,7 +31,7 @@
 //! assert_eq!(unerased, data.as_slice());
 //!
 //! // Unerase just a single element
-//! assert_eq!(erased.get(2).unerase::<i32>(), Some(&2));
+//! assert_eq!(erased.get(2).unwrap().unerase::<i32>(), Some(&2));
 //! ```
 //!
 //! ## Dependencies
