@@ -170,7 +170,7 @@ impl<'a> AnyMut<'a> {
         })
     }
 
-    /// Access this mutable reference as an immutable one.
+    /// Borrow this mutable reference as an immutable one.
     ///
     /// Even though you have mutable and unique access to a reference, this fuction lets you
     /// trade in the mutability for shared access.
@@ -179,14 +179,14 @@ impl<'a> AnyMut<'a> {
     /// let mut data : i32 = 7;
     /// let any = sashay::AnyMut::erase(&mut data);
     ///
-    /// // as_immutable() can be called multiple times, because immutable references provide shared access
-    /// let immutable_a : sashay::AnyRef = any.as_immutable();
-    /// let immutable_b : sashay::AnyRef = any.as_immutable();
+    /// // borrow() can be called multiple times, because immutable references provide shared access
+    /// let immutable_a : sashay::AnyRef = any.borrow();
+    /// let immutable_b : sashay::AnyRef = any.borrow();
     ///
     /// assert_eq!(immutable_a.unerase::<i32>(), Some(&7));
     /// assert_eq!(immutable_b.unerase::<i32>(), Some(&7));
     /// ```
-    pub fn as_immutable(&self) -> AnyRef {
+    pub fn borrow(&self) -> AnyRef {
         // SAFETY:
         // All parts are valid, we just cast to const
         // This is ok, because we have an immutable ref to self

@@ -209,7 +209,7 @@ impl<'a> AnySliceMut<'a> {
         })
     }
 
-    /// Access this mutable slice as an immutable one.
+    /// Borrow this mutable slice as an immutable one.
     ///
     /// Even though you have mutable and unique access to a slice, this fuction lets you
     /// trade in the mutability for shared access.
@@ -218,14 +218,14 @@ impl<'a> AnySliceMut<'a> {
     /// let mut data : [i32; 3] = [7, 6, 5];
     /// let any = sashay::AnySliceMut::erase(data.as_mut_slice());
     ///
-    /// // as_immutable() can be called multiple times, because immutable references provide shared access
-    /// let immutable_a = any.as_immutable();
-    /// let immutable_b = any.as_immutable();
+    /// // borrow() can be called multiple times, because immutable references provide shared access
+    /// let immutable_a = any.borrow();
+    /// let immutable_b = any.borrow();
     ///
     /// assert_eq!(immutable_a.len(), 3);
     /// assert_eq!(immutable_b.len(), 3);
     /// ```
-    pub fn as_immutable(&self) -> AnySliceRef {
+    pub fn borrow(&self) -> AnySliceRef {
         // SAFETY:
         // All parts are valid, we just cast to const
         // This is ok, because we have an immutable ref to self
